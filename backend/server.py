@@ -138,7 +138,7 @@ class Interest(InterestCreate):
     created_at: str
 
 
-DEFAULT_SETTINGS = {"upi_id": "dusol2026@oksbi", "whatsapp_number": "919999999999"}
+DEFAULT_SETTINGS = {"upi_id": "7065319679@fam", "whatsapp_number": "917065319679"}
 
 
 class SettingsUpdate(BaseModel):
