@@ -1,1 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="3" time="1.068" timestamp="2026-09-29T09:49:18.559837+00:00" hostname="agent-env-db419393-b7ee-489d-909f-1c1cbe2bcf7b"><testcase classname="tests.test_booking_api" name="test_root_contract" time="0.137" /><testcase classname="tests.test_booking_api" name="test_booking_create_and_list" time="0.256" /><testcase classname="tests.test_booking_api" name="test_booking_requires_core_fields" time="0.146" /></testsuite></testsuites>
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="2" failures="0" skipped="0" tests="2" time="0.573" timestamp="2026-09-29T10:26:42.077136+00:00" hostname="agent-env-db419393-b7ee-489d-909f-1c1cbe2bcf7b"><testcase classname="" name="tests.test_booking_api" time="0.000"><error message="collection failure">backend/tests/test_booking_api.py:4: in &lt;module&gt;
+    BASE_URL = os.environ["REACT_APP_BACKEND_URL"].rstrip("/")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen os&gt;:679: in __getitem__
+    ???
+E   KeyError: 'REACT_APP_BACKEND_URL'</error><error message="collection failure">backend/tests/test_booking_api.py:4: in &lt;module&gt;
+    BASE_URL = os.environ["REACT_APP_BACKEND_URL"].rstrip("/")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen os&gt;:679: in __getitem__
+    ???
+E   KeyError: 'REACT_APP_BACKEND_URL'</error></testcase></testsuite></testsuites>
