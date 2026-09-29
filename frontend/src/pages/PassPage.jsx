@@ -76,7 +76,7 @@ export default function PassPage() {
             <p className="ticket-variant" data-testid="pass-variant">{pass.pass_variant === "couple" ? "Couple pass · admits 2" : "Single pass · admits 1"}</p>
             <div className="ticket-meta">
               <span><CalendarDays size={14} /> Sun, 25 Oct 2026 · 4 PM</span>
-              <span><MapPin size={14} /> Punjabi Bagh, New Delhi</span>
+              <span><MapPin size={14} /> {pass.venue_address || "Punjabi Bagh, New Delhi"}</span>
             </div>
             <div className="pass-id">
               <span>REFERENCE</span>

@@ -86,6 +86,7 @@ class User(BaseModel):
     name: str
     picture: str = ""
     is_admin: bool = False
+    referral_code: str = ""
 
 
 class SessionExchange(BaseModel):
@@ -103,6 +104,7 @@ class BookingCreate(BaseModel):
     payment_reference: str
     payment_screenshot: Optional[str] = ""
     notes: Optional[str] = ""
+    referred_by: Optional[str] = ""
 
 
 class Booking(BaseModel):
@@ -123,6 +125,8 @@ class Booking(BaseModel):
     profile_picture: str = ""
     pass_token: str = ""
     checked_in_at: str = ""
+    referred_by: str = ""
+    reminder_sent_at: str = ""
 
 
 class PassView(BaseModel):
@@ -138,6 +142,7 @@ class PassView(BaseModel):
     amount: int = 0
     email: str = ""
     can_check_in: bool = False
+    venue_address: str = ""
 
 
 class BookingStatusUpdate(BaseModel):
@@ -182,12 +187,13 @@ class Interest(InterestCreate):
     created_at: str
 
 
-DEFAULT_SETTINGS = {"upi_id": "7065319679@fam", "whatsapp_number": "917065319679"}
+DEFAULT_SETTINGS = {"upi_id": "7065319679@fam", "whatsapp_number": "917065319679", "venue_address": "Punjabi Bagh, New Delhi (exact venue pin shared here)"}
 
 
 class SettingsUpdate(BaseModel):
     upi_id: str = Field(min_length=3, max_length=80)
     whatsapp_number: str = Field(min_length=10, max_length=15)
+    venue_address: str = Field(default=DEFAULT_SETTINGS["venue_address"], max_length=300)
 
 
 class Settings(SettingsUpdate):
@@ -304,7 +310,9 @@ async def exchange_session(input: SessionExchange):
         "picture": profile.get("picture", ""), "is_admin": _is_admin(email),
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
-    await db.users.update_one({"user_id": user_id}, {"$set": user_doc}, upsert=True)
+    referral_code = (existing or {}).get("referral_code") or f"SOL-{uuid.uuid4().hex[:5].upper()}"
+    await db.users.update_one({"user_id": user_id}, {"$set": {**user_doc, "referral_code": referral_code}}, upsert=True)
+    user_doc["referral_code"] = referral_code
     expires_at = datetime.now(timezone.utc) + timedelta(days=7)
     await db.user_sessions.delete_many({"user_id": user_id})
     await db.user_sessions.insert_one({"user_id": user_id, "session_token": profile["session_token"], "expires_at": expires_at.isoformat(), "created_at": datetime.now(timezone.utc).isoformat()})
@@ -373,6 +381,11 @@ async def create_booking(input: BookingCreate, request: Request):
         if not record:
             raise HTTPException(status_code=400, detail="Invalid payment screenshot")
     booking_data.update({"email": user["email"], "user_id": user["user_id"], "profile_picture": user.get("picture", "")})
+    referred_by = (booking_data.get("referred_by") or "").strip().upper()
+    if referred_by:
+        referrer = await db.users.find_one({"referral_code": referred_by}, {"_id": 0, "user_id": 1})
+        referred_by = referred_by if referrer and referrer["user_id"] != user["user_id"] else ""
+    booking_data["referred_by"] = referred_by
     booking = Booking(
         booking_id=f"SOL26-{uuid.uuid4().hex[:6].upper()}",
         **booking_data,
@@ -396,7 +409,7 @@ async def get_bookings(request: Request):
     return await db.bookings.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
 
 
-BOOKING_CSV_COLUMNS = ["booking_id", "created_at", "status", "checked_in_at", "name", "phone", "email", "pass_type", "pass_variant", "quantity", "amount", "payment_reference", "payment_screenshot", "notes"]
+BOOKING_CSV_COLUMNS = ["booking_id", "created_at", "status", "checked_in_at", "reminder_sent_at", "referred_by", "name", "phone", "email", "pass_type", "pass_variant", "quantity", "amount", "payment_reference", "payment_screenshot", "notes"]
 INTEREST_CSV_COLUMNS = ["interest_id", "created_at", "name", "phone", "notes"]
 
 
@@ -429,6 +442,8 @@ async def view_pass(pass_token: str, request: Request):
         raise HTTPException(status_code=404, detail="Pass not found")
     is_admin = await _optional_admin(request)
     public = {k: booking.get(k, "") for k in ("booking_id", "name", "pass_type", "pass_variant", "quantity", "status", "checked_in_at")}
+    if booking["status"] == "confirmed":
+        public["venue_address"] = (await get_settings_doc())["venue_address"]
     if is_admin:
         public.update({k: booking.get(k, "") for k in ("phone", "payment_reference", "amount", "email")})
         public["can_check_in"] = booking["status"] == "confirmed" and not booking.get("checked_in_at")
@@ -450,6 +465,65 @@ async def check_in_pass(pass_token: str, request: Request):
     return await view_pass(pass_token, request)
 
 
+@api_router.post("/bookings/{booking_id}/checkin", response_model=PassView)
+async def check_in_by_reference(booking_id: str, request: Request):
+    booking = await db.bookings.find_one({"booking_id": booking_id.strip().upper()}, {"_id": 0, "pass_token": 1})
+    if not booking:
+        raise HTTPException(status_code=404, detail="No booking with that reference")
+    return await check_in_pass(booking["pass_token"], request)
+
+
+@api_router.post("/bookings/{booking_id}/reminder-sent", response_model=Booking)
+async def mark_reminder_sent(booking_id: str, request: Request):
+    await current_user(request, admin_only=True)
+    result = await db.bookings.find_one_and_update(
+        {"booking_id": booking_id}, {"$set": {"reminder_sent_at": datetime.now(timezone.utc).isoformat()}},
+        return_document=ReturnDocument.AFTER, projection={"_id": 0},
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    return result
+
+
+class ReferralStat(BaseModel):
+    referral_code: str
+    name: str = ""
+    email: str = ""
+    bookings: int
+    guests: int
+
+
+async def _referral_stats(referred_by: Optional[str] = None) -> List[dict]:
+    pipeline = [
+        {"$match": {"referred_by": referred_by if referred_by else {"$ne": ""}, "status": {"$ne": "rejected"}}},
+        {"$group": {"_id": "$referred_by", "bookings": {"$sum": 1}, "guests": {"$sum": "$quantity"}}},
+        {"$sort": {"guests": -1, "bookings": -1}},
+    ]
+    rows = await db.bookings.aggregate(pipeline).to_list(500)
+    codes = [row["_id"] for row in rows]
+    users = {u["referral_code"]: u for u in await db.users.find({"referral_code": {"$in": codes}}, {"_id": 0}).to_list(500)}
+    return [
+        {"referral_code": row["_id"], "name": users.get(row["_id"], {}).get("name", ""), "email": users.get(row["_id"], {}).get("email", ""), "bookings": row["bookings"], "guests": row["guests"]}
+        for row in rows
+    ]
+
+
+@api_router.get("/referrals", response_model=List[ReferralStat])
+async def referral_leaderboard(request: Request):
+    await current_user(request, admin_only=True)
+    return await _referral_stats()
+
+
+@api_router.get("/referrals/mine", response_model=ReferralStat)
+async def my_referrals(request: Request):
+    user = await current_user(request)
+    code = user.get("referral_code", "")
+    stats = await _referral_stats(code) if code else []
+    if stats:
+        return stats[0]
+    return ReferralStat(referral_code=code, name=user["name"], email=user["email"], bookings=0, guests=0)
+
+
 @api_router.get("/settings")
 async def get_public_settings():
     settings = await get_settings_doc()
@@ -469,7 +543,7 @@ async def update_settings(input: SettingsUpdate, request: Request):
     whatsapp = "".join(ch for ch in input.whatsapp_number if ch.isdigit())
     if len(whatsapp) < 10 or "@" not in input.upi_id:
         raise HTTPException(status_code=400, detail="Enter a valid UPI ID (name@bank) and WhatsApp number with country code")
-    update = {"upi_id": input.upi_id.strip(), "whatsapp_number": whatsapp, "updated_at": datetime.now(timezone.utc).isoformat()}
+    update = {"upi_id": input.upi_id.strip(), "whatsapp_number": whatsapp, "venue_address": input.venue_address.strip(), "updated_at": datetime.now(timezone.utc).isoformat()}
     await db.settings.update_one({"key": "site"}, {"$set": update}, upsert=True)
     settings = await get_settings_doc()
     return Settings(**settings, alerts_configured=_twilio_config() is not None)

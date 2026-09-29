@@ -27,6 +27,11 @@ export default function PartyPage() {
   const [authPrompt, setAuthPrompt] = useState(false);
 
   useEffect(() => {
+    const ref = new URLSearchParams(location.search).get("ref");
+    if (ref) localStorage.setItem("solstice_ref", ref.toUpperCase());
+  }, [location.search]);
+
+  useEffect(() => {
     axios.get(`${API}/auth/me`, { withCredentials: true })
       .then((response) => setUser(response.data))
       .catch(() => setUser(null));

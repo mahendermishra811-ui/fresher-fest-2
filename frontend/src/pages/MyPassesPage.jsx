@@ -4,6 +4,7 @@ import axios from "axios";
 import { ArrowUpRight, Ticket } from "lucide-react";
 import { API, startGoogleSignIn } from "@/config";
 import { Logo } from "@/components/Logo";
+import InviteCard from "@/components/InviteCard";
 
 export default function MyPassesPage() {
   const [user, setUser] = useState(undefined);
@@ -49,6 +50,7 @@ export default function MyPassesPage() {
       </header>
       <div className="modal-kicker" style={{ marginTop: 34 }}>YOUR PASSES</div>
       <h1 className="my-passes-title">{bookings.length ? "Here’s what you’ve got." : "No passes yet."}</h1>
+      <InviteCard user={user} />
       {!bookings.length && (
         <Link to="/#passes" className="primary-btn" data-testid="my-passes-book-button">Book a pass <ArrowUpRight size={18} /></Link>
       )}

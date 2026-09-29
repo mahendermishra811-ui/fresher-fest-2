@@ -10,6 +10,7 @@ export default function BookingModal({ tier, variant, setVariant, form, setForm,
   const [busy, setBusy] = useState(false);
   const price = tier[variant];
   const quantity = variant === "couple" ? 2 : 1;
+  const referredBy = localStorage.getItem("solstice_ref") || "";
   const update = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const submitBooking = async (e) => {
@@ -34,7 +35,7 @@ export default function BookingModal({ tier, variant, setVariant, form, setForm,
       }
       const response = await axios.post(
         `${API}/bookings`,
-        { ...form, pass_type: tier.name, pass_variant: variant, quantity, amount: price, payment_screenshot: screenshotPath },
+        { ...form, pass_type: tier.name, pass_variant: variant, quantity, amount: price, payment_screenshot: screenshotPath, referred_by: referredBy },
         { withCredentials: true }
       );
       onSubmitted(response.data);
@@ -70,6 +71,7 @@ export default function BookingModal({ tier, variant, setVariant, form, setForm,
           <button onClick={() => navigator.clipboard?.writeText(UPI_ID)} data-testid="copy-upi-button"><Copy size={15} /> Copy</button>
         </div>
         <p className="payment-hint">Scan in GPay, PhonePe or Paytm, then paste the UPI reference below. A screenshot helps us confirm faster.</p>
+        {referredBy && <div className="ref-chip" data-testid="referred-by-chip">Invited with code <b>{referredBy}</b> — your friend gets the credit.</div>}
         <form onSubmit={submitBooking}>
           <label>YOUR NAME
             <input name="name" value={form.name} onChange={update} placeholder="Full name" data-testid="booking-name-input" />

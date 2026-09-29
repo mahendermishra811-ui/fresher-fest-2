@@ -5,7 +5,7 @@ import { API } from "@/config";
 
 export default function SettingsPanel() {
   const [settings, setSettings] = useState(null);
-  const [form, setForm] = useState({ upi_id: "", whatsapp_number: "" });
+  const [form, setForm] = useState({ upi_id: "", whatsapp_number: "", venue_address: "" });
   const [message, setMessage] = useState({ type: "", text: "" });
   const [saving, setSaving] = useState(false);
 
@@ -13,7 +13,7 @@ export default function SettingsPanel() {
     axios.get(`${API}/settings/admin`, { withCredentials: true })
       .then((response) => {
         setSettings(response.data);
-        setForm({ upi_id: response.data.upi_id, whatsapp_number: response.data.whatsapp_number });
+        setForm({ upi_id: response.data.upi_id, whatsapp_number: response.data.whatsapp_number, venue_address: response.data.venue_address || "" });
       })
       .catch(() => setMessage({ type: "error", text: "Could not load settings." }));
   }, []);
@@ -27,7 +27,7 @@ export default function SettingsPanel() {
     try {
       const response = await axios.put(`${API}/settings`, form, { withCredentials: true });
       setSettings(response.data);
-      setForm({ upi_id: response.data.upi_id, whatsapp_number: response.data.whatsapp_number });
+      setForm({ upi_id: response.data.upi_id, whatsapp_number: response.data.whatsapp_number, venue_address: response.data.venue_address || "" });
       setMessage({ type: "ok", text: "Saved. Guests now see these details on the party page." });
     } catch (error) {
       setMessage({ type: "error", text: error.response?.data?.detail || "Could not save. Check the values and try again." });
@@ -47,6 +47,9 @@ export default function SettingsPanel() {
         </label>
         <label>WHATSAPP NUMBER <span>(with country code, e.g. 9198xxxxxxxx)</span>
           <input name="whatsapp_number" value={form.whatsapp_number} onChange={update} placeholder="91XXXXXXXXXX" data-testid="settings-whatsapp-input" />
+        </label>
+        <label>VENUE DETAILS <span>(shown only to confirmed pass holders + in reminders)</span>
+          <input name="venue_address" value={form.venue_address} onChange={update} placeholder="Exact venue name, address, landmark or maps link" data-testid="settings-venue-input" />
         </label>
         {message.text && (
           <div className={message.type === "ok" ? "form-ok" : "form-error"} data-testid="settings-message">{message.text}</div>

@@ -8,6 +8,7 @@ import PartyPage from "@/pages/PartyPage";
 import AdminPage from "@/pages/AdminPage";
 import PassPage from "@/pages/PassPage";
 import MyPassesPage from "@/pages/MyPassesPage";
+import ScanPage from "@/pages/ScanPage";
 
 function AuthCallback() {
   const location = useLocation();
@@ -48,6 +49,7 @@ function Routed() {
     <Routes>
       <Route path="/" element={<PartyPage />} />
       <Route path="/admin" element={<AdminPage />} />
+      <Route path="/admin/scan" element={<ScanPage />} />
       <Route path="/pass/:token" element={<PassPage />} />
       <Route path="/my-passes" element={<MyPassesPage />} />
     </Routes>

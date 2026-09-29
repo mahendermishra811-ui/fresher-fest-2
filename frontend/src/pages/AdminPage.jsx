@@ -7,6 +7,8 @@ import { Logo } from "@/components/Logo";
 import SettingsPanel from "@/components/admin/SettingsPanel";
 import ExportButton from "@/components/admin/ExportButton";
 import PassActions from "@/components/admin/PassActions";
+import RemindersPanel from "@/components/admin/RemindersPanel";
+import ReferralsPanel from "@/components/admin/ReferralsPanel";
 
 function Screenshot({ path }) {
   const [url, setUrl] = useState("");
@@ -124,6 +126,7 @@ export default function AdminPage() {
         <div className="admin-user">
           {user.picture && <img src={user.picture} alt="" />}
           <span>{user.name}</span>
+          <Link to="/admin/scan" className="outline-btn small scan-cta" data-testid="admin-scan-link"><ScanLine size={14} /> Gate scanner</Link>
           <Link to="/" className="outline-btn small" data-testid="admin-view-site">View site</Link>
           <button className="outline-btn small" onClick={logout} data-testid="admin-logout-button"><LogOut size={14} /> Logout</button>
         </div>
@@ -145,6 +148,8 @@ export default function AdminPage() {
         <div className="admin-tabs">
           <button className={`tab-btn ${tab === "bookings" ? "active" : ""}`} onClick={() => setTab("bookings")} data-testid="tab-bookings">Bookings</button>
           <button className={`tab-btn ${tab === "interests" ? "active" : ""}`} onClick={() => setTab("interests")} data-testid="tab-interests">Group interests</button>
+          <button className={`tab-btn ${tab === "reminders" ? "active" : ""}`} onClick={() => setTab("reminders")} data-testid="tab-reminders">Reminders</button>
+          <button className={`tab-btn ${tab === "referrals" ? "active" : ""}`} onClick={() => setTab("referrals")} data-testid="tab-referrals">Referrals</button>
           <button className={`tab-btn ${tab === "settings" ? "active" : ""}`} onClick={() => setTab("settings")} data-testid="tab-settings">Settings</button>
         </div>
         {tab === "bookings" && <ExportButton path="/bookings/export" filename="solstice26-bookings.csv" label="Download bookings CSV" testId="export-bookings-button" />}
@@ -154,6 +159,13 @@ export default function AdminPage() {
       {loadError && <div className="form-error" data-testid="admin-load-error">{loadError}</div>}
 
       {tab === "settings" && <SettingsPanel />}
+      {tab === "referrals" && <ReferralsPanel />}
+      {tab === "reminders" && (
+        <RemindersPanel
+          bookings={bookings}
+          onUpdated={(updated) => setBookings((current) => current.map((item) => (item.booking_id === updated.booking_id ? updated : item)))}
+        />
+      )}
 
       {tab === "bookings" && (
         <div className="table-wrap">
