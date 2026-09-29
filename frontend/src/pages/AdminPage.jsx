@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import { Check, LogOut, Users, Wallet, Ticket, X } from "lucide-react";
+import { Check, LogOut, ScanLine, Users, Wallet, Ticket, X } from "lucide-react";
 import { API, startGoogleSignIn } from "@/config";
 import { Logo } from "@/components/Logo";
 import SettingsPanel from "@/components/admin/SettingsPanel";
@@ -60,6 +60,12 @@ export default function AdminPage() {
       .catch(() => setUser(null));
   }, [loadData]);
 
+  useEffect(() => {
+    if (!user?.is_admin) return undefined;
+    const timer = setInterval(loadData, 15000);
+    return () => clearInterval(timer);
+  }, [user, loadData]);
+
   const setStatus = async (bookingId, status) => {
     const response = await axios.patch(`${API}/bookings/${bookingId}`, { status }, { withCredentials: true });
     setBookings((current) => current.map((item) => (item.booking_id === bookingId ? response.data : item)));
@@ -107,6 +113,9 @@ export default function AdminPage() {
 
   const revenue = bookings.filter((b) => b.status !== "rejected").reduce((sum, b) => sum + b.amount, 0);
   const pending = bookings.filter((b) => b.status === "pending_review").length;
+  const confirmed = bookings.filter((b) => b.status === "confirmed");
+  const checkedIn = confirmed.filter((b) => b.checked_in_at).length;
+  const guestsIn = confirmed.filter((b) => b.checked_in_at).reduce((sum, b) => sum + b.quantity, 0);
 
   return (
     <div className="admin-shell" data-testid="admin-dashboard">
@@ -125,6 +134,11 @@ export default function AdminPage() {
         <div className="stat-card" data-testid="stat-revenue"><Wallet size={18} /><strong>₹{revenue.toLocaleString("en-IN")}</strong><span>Expected revenue</span></div>
         <div className="stat-card" data-testid="stat-pending"><Check size={18} /><strong>{pending}</strong><span>Pending review</span></div>
         <div className="stat-card" data-testid="stat-interests"><Users size={18} /><strong>{interests.length}</strong><span>Group interests</span></div>
+        <div className="stat-card live" data-testid="stat-checkin">
+          <ScanLine size={18} />
+          <strong><span data-testid="checkin-count">{checkedIn}</span> <em>/ {confirmed.length}</em></strong>
+          <span><i className="live-dot" /> Checked in / confirmed · {guestsIn} guests inside</span>
+        </div>
       </div>
 
       <div className="tab-row">

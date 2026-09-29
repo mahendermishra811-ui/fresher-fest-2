@@ -10,6 +10,7 @@ import Passes from "@/components/Passes";
 import Details from "@/components/Details";
 import WideImage from "@/components/WideImage";
 import BookingModal from "@/components/BookingModal";
+import ShareCard from "@/components/ShareCard";
 import { AuthPrompt, Confirmation, InterestModal } from "@/components/Prompts";
 import { Logo } from "@/components/Logo";
 import { Instagram } from "lucide-react";
@@ -21,6 +22,7 @@ export default function PartyPage() {
   const [submitted, setSubmitted] = useState(null);
   const [form, setForm] = useState({ name: "", phone: "", email: "", payment_reference: "", notes: "" });
   const [interestOpen, setInterestOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [authPrompt, setAuthPrompt] = useState(false);
 
@@ -63,7 +65,7 @@ export default function PartyPage() {
         <Ticker />
         <Experience />
         <Passes onSelect={(tier) => { setSelected(tier); setVariant("single"); }} onGroupInterest={() => setInterestOpen(true)} />
-        <Details />
+        <Details onShare={() => setShareOpen(true)} />
         <WideImage />
       </main>
       <footer>
@@ -90,6 +92,7 @@ export default function PartyPage() {
       )}
       {submitted && <Confirmation booking={submitted} onClose={() => setSubmitted(null)} />}
       {interestOpen && <InterestModal onClose={() => setInterestOpen(false)} />}
+      {shareOpen && <ShareCard onClose={() => setShareOpen(false)} />}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { ArrowUpRight, MapPin } from "lucide-react";
+import { ArrowUpRight, MapPin, Share2 } from "lucide-react";
 import { Reveal } from "./Reveal";
 
 const facts = [
@@ -7,7 +7,7 @@ const facts = [
   { label: "WHAT’S ON", title: "DJ sets · Buffet · Mocktails", sub: "Multi-cuisine buffet · Premium mocktails · Bar counters" },
 ];
 
-export default function Details() {
+export default function Details({ onShare }) {
   return (
     <section className="details section-pad" id="details">
       <Reveal className="section-label">SAVE THE DATE / 03</Reveal>
@@ -20,6 +20,9 @@ export default function Details() {
             <a href="#passes" className="outline-btn" data-testid="details-choose-pass-button">
               Choose your pass <ArrowUpRight size={17} />
             </a>
+            <button className="text-link share-link" onClick={onShare} data-testid="open-share-card-button">
+              <Share2 size={15} /> Get the Instagram countdown card
+            </button>
           </Reveal>
         </div>
         <div className="detail-list">

@@ -384,6 +384,12 @@ async def create_booking(input: BookingCreate, request: Request):
     return booking
 
 
+@api_router.get("/bookings/mine", response_model=List[Booking])
+async def get_my_bookings(request: Request):
+    user = await current_user(request)
+    return await db.bookings.find({"user_id": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(100)
+
+
 @api_router.get("/bookings", response_model=List[Booking])
 async def get_bookings(request: Request):
     await current_user(request, admin_only=True)

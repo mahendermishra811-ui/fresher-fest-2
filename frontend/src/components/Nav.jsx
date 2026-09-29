@@ -19,6 +19,9 @@ export default function Nav({ user }) {
         <a href="#passes" data-testid="nav-passes" onClick={() => setMenuOpen(false)}>Passes</a>
         <a href="#experience" data-testid="nav-experience" onClick={() => setMenuOpen(false)}>The night</a>
         <a href="#details" data-testid="nav-details" onClick={() => setMenuOpen(false)}>Details</a>
+        {user && (
+          <Link to="/my-passes" data-testid="nav-my-passes-link">My passes</Link>
+        )}
         {user?.is_admin && (
           <Link to="/admin" data-testid="nav-admin-link">Organiser</Link>
         )}
