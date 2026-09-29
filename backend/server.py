@@ -62,6 +62,15 @@ class Booking(BaseModel):
     status: str = "pending_review"
     created_at: str
 
+class InterestCreate(BaseModel):
+    name: str
+    phone: str
+    notes: Optional[str] = ""
+
+class Interest(InterestCreate):
+    interest_id: str
+    created_at: str
+
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
@@ -80,6 +89,20 @@ async def create_booking(input: BookingCreate):
 @api_router.get("/bookings", response_model=List[Booking])
 async def get_bookings():
     return await db.bookings.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+
+@api_router.post("/interests", response_model=Interest)
+async def create_interest(input: InterestCreate):
+    interest = Interest(
+        interest_id=f"GROUP-{uuid.uuid4().hex[:6].upper()}",
+        **input.model_dump(),
+        created_at=datetime.now(timezone.utc).isoformat(),
+    )
+    await db.interests.insert_one(interest.model_dump())
+    return interest
+
+@api_router.get("/interests", response_model=List[Interest])
+async def get_interests():
+    return await db.interests.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
 
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):
