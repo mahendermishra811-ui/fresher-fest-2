@@ -1,0 +1,43 @@
+{
+  "summary": "Iteration 6 covered the three new features (Gate Scanner check-in-by-reference, Reminders + venue_address, Referrals + invite card + landing ?ref) end-to-end. 27/27 new pytest cases passed and every UI flow specified in the review request rendered correctly. One minor bug found: the 'already checked in' message returns a raw ISO timestamp rather than the friendly IST hh:mm AM/PM format specified in the PRD.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/pass/{token}/checkin & POST /api/bookings/{ref}/checkin", "issue": "On repeat check-in returns 400 with `Already checked in at 2026-09-29T12:38:10.822196+00:00` — raw ISO. Spec expects friendly IST time like `Already checked in at 06:08 PM`. Fix: format booking['checked_in_at'] to IST hh:mm AM/PM in the HTTPException detail."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Reminder WhatsApp share text", "issue": "The 🎉 emoji in the reminder text is being URL-encoded as %EF%BF%BD (U+FFFD replacement char) instead of %F0%9F%8E%89 in the wa.me popup. Source bytes are correct UTF-8 (\\xf0\\x9f\\x8e\\x89) — likely a webpack/babel encoding step is corrupting the emoji. Cosmetic only.", "affected_selectors": ["send-reminder-{id}"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_scan_reminders_referrals.py",
+    "/app/test_reports/pytest/pytest_iter6.xml"
+  ],
+  "action_items": [
+    "Change the 'Already checked in at ...' error detail in check_in_pass to format `booking['checked_in_at']` into IST hh:mm AM/PM (e.g. datetime.fromisoformat(...).astimezone(IST).strftime('%I:%M %p'))",
+    "Investigate emoji encoding in the WhatsApp reminder template — the 🎉 becomes %EF%BF%BD after encodeURIComponent in the built bundle. Consider replacing with the escape sequence \\u{1F389} or emoji code."
+  ],
+  "critical_code_review_comments": [
+    "server.py:462 raises HTTPException with the raw ISO string — leaks precise UTC timestamp and violates spec that promises IST hh:mm AM/PM.",
+    "RemindersPanel.jsx:19 defaults venue to 'Punjabi Bagh, New Delhi' if settings fetch fails — this is a duplication of DEFAULT_SETTINGS in backend; consider centralising or leaving blank until fetched.",
+    "InviteCard uses `stats ? stats.guests : '…'` — during initial load an ellipsis renders; a tiny skeleton placeholder would be clearer.",
+    "ScanPage does not visually distinguish between 400 (already checked in / pending) and 404 (unknown ref) — both show the red 'Not admitted' overlay with backend detail text; adequate but could highlight recoverable cases.",
+    "server.py:404 /api/bookings/mine sorts on 'created_at' string — works because ISO strings sort lexicographically, but explicit index missing.",
+    "referrals leaderboard aggregates entire non-rejected bookings each call with no cache — fine at current volume but consider a materialised counter if event scales."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_scan_reminders_referrals.py (new)",
+    "MongoDB user_sessions.expires_at re-extended to ~2026-09-29T18:36Z (data-only)"
+  ],
+  "success_rate": {"backend": "100% (27/27)", "frontend": "100% (all requested flows verified)"},
+  "test_credentials": "Seeded sessions (Bearer or session_token cookie): ADMIN 'tmp_admin_tok_123' (mahendermishra811@gmail.com, referral_code SOL-ADMIN), GUEST1 'tmp_guest_tok_123' (guest@example.com, SOL-AAAAA), GUEST2 'tmp_guest2_tok_123' (guest2@example.com, SOL-BBBBB). Expires ~2026-09-29T18:36Z.",
+  "seed_data_creation": "Created and confirmed booking SOL26-FE2BC3 (guest1, Early Bird single, checked-in during UI scan test, reminder sent via UI). Referral test booking SOL-AAAAA→guest2 (SOL26-... via API in test_referral_valid_uppercased) plus a couple of self/unknown ref bookings by guest1. Settings restored to (upi 7065319679@fam, whatsapp 917065319679, venue 'Punjabi Bagh, New Delhi (exact venue pin shared here)').",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend regression file /app/backend/tests/test_scan_reminders_referrals.py (27 tests) covers: /auth/me referral_code, public vs admin settings, venue_address gating on /api/pass/{token}, POST /api/bookings/{ref}/checkin auth+lowercase+404+400, POST /api/bookings/{id}/reminder-sent, referral self/unknown/valid-uppercased storage, /api/referrals/mine no-leak zero row, admin leaderboard sorted, CSV new columns. Guest1 has multiple bookings now — one confirmed+checked-in (SOL26-FE2BC3), plus SOL26-917E48 & SOL26-CF02C6 pending. Guest2 has SOL26-2068CC (confirmed, checked-in, reminder sent) plus test bookings with ref=SOL-AAAAA. If a fresh pending booking is needed for follow-up testing, PATCH SOL26-917E48 back to pending_review or create new. Emoji encoding bug noted but non-blocking.",
+  "rca of the issue": "Bug 1 (raw ISO in check-in error): In `check_in_pass` (server.py line 462) the message is `f\"Already checked in at {booking['checked_in_at']}\"`. `booking['checked_in_at']` is the ISO string as stored. Fix: `dt = datetime.fromisoformat(booking['checked_in_at']); friendly = dt.astimezone(IST).strftime('%I:%M %p').lstrip('0'); raise HTTPException(400, f'Already checked in at {friendly}')`. Reproduction: check in a confirmed booking twice; second call returns raw ISO. Mitigation trivial (~3 lines). Bug 2 (emoji): source is correct UTF-8 but the served bundle appears to have replaced the 🎉 with U+FFFD before encodeURIComponent runs — likely webpack/babel picking a non-UTF-8 loader on that file. Recommend replacing literal with `\\u{1F389}` escape in RemindersPanel.jsx line 13 to bypass any loader encoding step."
+}

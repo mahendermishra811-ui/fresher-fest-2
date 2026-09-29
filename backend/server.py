@@ -459,7 +459,8 @@ async def check_in_pass(pass_token: str, request: Request):
     if booking["status"] != "confirmed":
         raise HTTPException(status_code=400, detail="Only confirmed passes can be checked in")
     if booking.get("checked_in_at"):
-        raise HTTPException(status_code=400, detail=f"Already checked in at {booking['checked_in_at']}")
+        seen = datetime.fromisoformat(booking["checked_in_at"]).astimezone(IST).strftime("%I:%M %p")
+        raise HTTPException(status_code=400, detail=f"Already checked in at {seen}")
     now = datetime.now(timezone.utc).isoformat()
     await db.bookings.update_one({"pass_token": pass_token}, {"$set": {"checked_in_at": now}})
     return await view_pass(pass_token, request)
