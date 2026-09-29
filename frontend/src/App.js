@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
+import { BrowserRouter, useLocation, useNavigate } from "react-router-dom";
 import { ArrowUpRight, Check, ChevronDown, Copy, Flame, Instagram, MapPin, Menu, MessageCircle, Music2, Sparkles, Ticket, Utensils, X, Zap } from "lucide-react";
 import "@/App.css";
 
@@ -19,7 +20,25 @@ const getCountdown = () => {
   return { days: Math.floor(difference / 86400000), hours: Math.floor((difference / 3600000) % 24), minutes: Math.floor((difference / 60000) % 60) };
 };
 
-function App() {
+function AuthCallback() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const processed = useRef(false);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    if (processed.current) return;
+    processed.current = true;
+    const sessionId = new URLSearchParams(location.hash.replace(/^#/, "")).get("session_id");
+    if (!sessionId) return;
+    axios.post(`${API}/auth/session`, { session_id: sessionId }, { withCredentials: true })
+      .then(() => navigate("/#booking", { replace: true }))
+      .catch(() => setError("Google sign-in could not be completed. Please try again."));
+  }, [location.hash, navigate]);
+  return <div className="auth-callback" data-testid="auth-callback"><div className="modal-kicker">SECURE SIGN-IN</div><h2>{error || "Connecting your Google account…"}</h2>{error && <button className="submit-btn" onClick={() => navigate("/", { replace: true })} data-testid="auth-callback-retry">Back to booking</button>}</div>;
+}
+
+function PartyPage() {
+  const location = useLocation();
   const [selected, setSelected] = useState(null);
   const [variant, setVariant] = useState("single");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -30,6 +49,19 @@ function App() {
   const [interestOpen, setInterestOpen] = useState(false);
   const [interestSent, setInterestSent] = useState(false);
   const [interest, setInterest] = useState({ name: "", phone: "", notes: "" });
+  const [user, setUser] = useState(null);
+  const [authPrompt, setAuthPrompt] = useState(false);
+  useEffect(() => { axios.get(`${API}/auth/me`, { withCredentials: true }).then((response) => setUser(response.data)).catch(() => setUser(null)); }, []);
+  useEffect(() => {
+    if (!user || location.hash !== "#booking") return;
+    const pending = sessionStorage.getItem("pending_booking");
+    if (!pending) return;
+    const saved = JSON.parse(pending);
+    const tier = passTiers.find((item) => item.id === saved.tierId);
+    if (tier) { setSelected(tier); setVariant(saved.variant); setForm(saved.form); }
+    sessionStorage.removeItem("pending_booking");
+  }, [location.hash, user]);
+  useEffect(() => { if (user) setForm((current) => ({ ...current, name: current.name || user.name, email: current.email || user.email })); }, [user]);
   useEffect(() => { const timer = setInterval(() => setTimeLeft(getCountdown()), 60000); return () => clearInterval(timer); }, []);
 
   const openBooking = (tier) => { setSelected(tier); setVariant("single"); setError(""); };
@@ -41,12 +73,22 @@ function App() {
   const submitBooking = async (e) => {
     e.preventDefault(); setError("");
     if (!form.name || !form.phone || !form.payment_reference) { setError("Please add your name, phone number and UPI reference."); return; }
+    if (!user) {
+      sessionStorage.setItem("pending_booking", JSON.stringify({ tierId: selected.id, variant, form }));
+      setAuthPrompt(true);
+      return;
+    }
     try {
-      const response = await axios.post(`${API}/bookings`, { ...form, pass_type: selected.name, pass_variant: variant, quantity, amount: price });
+      const response = await axios.post(`${API}/bookings`, { ...form, pass_type: selected.name, pass_variant: variant, quantity, amount: price }, { withCredentials: true });
       setSubmitted(response.data); setSelected(null);
     } catch { setError("Something went wrong. Please try again or WhatsApp us directly."); }
   };
   const submitInterest = async (e) => { e.preventDefault(); if (!interest.name || !interest.phone) return; await axios.post(`${API}/interests`, interest); setInterestSent(true); };
+  const signIn = () => {
+    // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+    const redirectUrl = window.location.origin + "/";
+    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+  };
 
   const whatsapp = "https://wa.me/919999999999?text=Hi%20DU%20SOL%20Freshers%20team%2C%20I%20want%20to%20book%20passes%20for%20October%2025%2C%202026.";
 
@@ -71,7 +113,7 @@ function App() {
         <div className="hero-visual reveal reveal-delay"><div className="hero-image"><img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=85" alt="Neon festival crowd"/><div className="image-shade"/><div className="hero-sticker"><span>DU SOL</span><strong>26</strong><span>ALL NIGHT</span></div><div className="hero-caption"><span>01 / 03</span><span>TURN IT UP <ArrowUpRight size={14}/></span></div></div></div>
       </section>
 
-      <section className="ticker" data-testid="event-ticker"><div><span>★</span> EARLY BIRD PRICES END SOON <span>★</span> ONE NIGHT ONLY <span>★</span> OCTOBER 18, 2026 <span>★</span> EARLY BIRD PRICES END SOON <span>★</span></div></section>
+      <section className="ticker" data-testid="event-ticker"><div><span>★</span> EARLY BIRD PRICES END SOON <span>★</span> ONE NIGHT ONLY <span>★</span> OCTOBER 25, 2026 <span>★</span> EARLY BIRD PRICES END SOON <span>★</span></div></section>
 
       <section className="intro section-pad" id="experience"><div className="section-label">THE VIBE / 01</div><div className="intro-grid"><h2>This is not<br/>a <em>function.</em></h2><div className="intro-content"><p className="big-copy">This is your first iconic night as a DU SOL legend.</p><p>Expect a room full of new faces, old friends, heavy bass and the kind of energy that makes Monday feel very far away.</p><div className="feature-row"><span><Music2/> <b>Live DJs</b></span><span><Utensils/> <b>Unlimited food</b></span><span><Sparkles/> <b>Mocktails + bar</b></span></div></div></div></section>
 
@@ -85,10 +127,21 @@ function App() {
     </main>
     <footer><div className="brand"><span className="brand-mark">DS</span><span>DU SOL <b>FRESHERS</b></span></div><span>© 2026 DU SOL FRESHERS · MADE FOR THE CLASS OF ’26</span><a href="https://instagram.com" target="_blank" rel="noreferrer" data-testid="instagram-link"><Instagram size={18}/></a></footer>
 
-    {selected && <div className="modal-backdrop" data-testid="booking-modal"><div className="booking-modal"><button className="close-btn" onClick={() => setSelected(null)} aria-label="Close booking" data-testid="close-booking-modal"><X/></button><div className="modal-kicker">YOU’RE BOOKING</div><h2>{selected.name}</h2><div className="variant-toggle"><button className={variant === "single" ? "active" : ""} onClick={() => setVariant("single")} data-testid="single-variant-button">Single <b>₹{getLivePrice(selected.single).toLocaleString("en-IN")}</b></button><button className={variant === "couple" ? "active" : ""} onClick={() => setVariant("couple")} data-testid="couple-variant-button">Couple <b>₹{getLivePrice(selected.couple, true).toLocaleString("en-IN")}</b></button></div><div className="upi-box"><div><span>PAY VIA UPI</span><strong>dusol2026@oksbi</strong></div><button onClick={() => navigator.clipboard?.writeText("dusol2026@oksbi")} data-testid="copy-upi-button"><Copy size={15}/> Copy</button></div><p className="payment-hint">Scan in GPay, PhonePe or Paytm, then paste the UPI reference below.</p><form onSubmit={submitBooking}><label>YOUR NAME<input name="name" value={form.name} onChange={update} placeholder="Full name" data-testid="booking-name-input"/></label><label>PHONE NUMBER<input name="phone" value={form.phone} onChange={update} placeholder="10-digit mobile number" data-testid="booking-phone-input"/></label><label>EMAIL <span>(optional)</span><input name="email" value={form.email} onChange={update} placeholder="you@example.com" data-testid="booking-email-input"/></label><label>UPI TRANSACTION REFERENCE<input name="payment_reference" value={form.payment_reference} onChange={update} placeholder="e.g. 3264189021" data-testid="payment-reference-input"/></label>{error && <div className="form-error" data-testid="booking-error">{error}</div>}<button className="submit-btn" type="submit" data-testid="submit-booking-button">Confirm ₹{price.toLocaleString("en-IN")} booking <ArrowUpRight size={18}/></button></form></div></div>}
+    {selected && <div className="modal-backdrop" data-testid="booking-modal"><div className="booking-modal"><button className="close-btn" onClick={() => setSelected(null)} aria-label="Close booking" data-testid="close-booking-modal"><X/></button><div className="modal-kicker">YOU’RE BOOKING</div><h2>{selected.name}</h2>{user && <div className="signed-in-user" data-testid="signed-in-user">{user.picture && <img src={user.picture} alt=""/>}<span>Signed in as <b>{user.name}</b></span></div>}<div className="variant-toggle"><button className={variant === "single" ? "active" : ""} onClick={() => setVariant("single")} data-testid="single-variant-button">Single <b>₹{getLivePrice(selected.single).toLocaleString("en-IN")}</b></button><button className={variant === "couple" ? "active" : ""} onClick={() => setVariant("couple")} data-testid="couple-variant-button">Couple <b>₹{getLivePrice(selected.couple, true).toLocaleString("en-IN")}</b></button></div><div className="upi-box"><div><span>PAY VIA UPI</span><strong>dusol2026@oksbi</strong></div><button onClick={() => navigator.clipboard?.writeText("dusol2026@oksbi")} data-testid="copy-upi-button"><Copy size={15}/> Copy</button></div><p className="payment-hint">Scan in GPay, PhonePe or Paytm, then paste the UPI reference below.</p><form onSubmit={submitBooking}><label>YOUR NAME<input name="name" value={form.name} onChange={update} placeholder="Full name" data-testid="booking-name-input"/></label><label>PHONE NUMBER<input name="phone" value={form.phone} onChange={update} placeholder="10-digit mobile number" data-testid="booking-phone-input"/></label><label>EMAIL <span>(prefilled from Google)</span><input name="email" value={form.email} onChange={update} placeholder="you@example.com" data-testid="booking-email-input"/></label><label>UPI TRANSACTION REFERENCE<input name="payment_reference" value={form.payment_reference} onChange={update} placeholder="e.g. 3264189021" data-testid="payment-reference-input"/></label>{error && <div className="form-error" data-testid="booking-error">{error}</div>}<button className="submit-btn" type="submit" data-testid="submit-booking-button">{user ? `Confirm ₹${price.toLocaleString("en-IN")} booking` : "Continue with Google to confirm"} <ArrowUpRight size={18}/></button></form></div></div>}
+    {authPrompt && <div className="modal-backdrop" data-testid="google-signin-modal"><div className="confirmation-card"><button className="close-btn" onClick={() => setAuthPrompt(false)} data-testid="close-google-signin-modal"><X/></button><div className="modal-kicker">ONE QUICK STEP</div><h2>Sign in to confirm.</h2><p>Your name and email will be filled from Google. Your phone number stays required for WhatsApp updates.</p><button className="google-btn" onClick={signIn} data-testid="google-signin-button"><span>G</span> Continue with Google</button></div></div>}
     {submitted && <div className="modal-backdrop" data-testid="confirmation-modal"><div className="confirmation-card"><div className="success-icon"><Check size={30}/></div><div className="modal-kicker">BOOKING RECEIVED</div><h2>You’re on the list.</h2><p>We’re checking your payment and will send your confirmed pass to <b>{submitted.phone}</b> on WhatsApp.</p><div className="pass-id"><span>YOUR REFERENCE</span><strong data-testid="booking-reference">{submitted.booking_id}</strong></div><a href={whatsapp} target="_blank" rel="noreferrer" className="submit-btn" data-testid="confirmation-whatsapp-button"><MessageCircle size={18}/> Send details on WhatsApp</a><button className="text-link close-confirm" onClick={() => setSubmitted(null)} data-testid="close-confirmation-button">Back to the party page</button></div></div>}
     {interestOpen && <div className="modal-backdrop" data-testid="interest-modal"><div className="booking-modal"><button className="close-btn" onClick={() => setInterestOpen(false)} data-testid="close-interest-modal"><X/></button>{interestSent ? <><div className="success-icon"><Check size={30}/></div><div className="modal-kicker">INTEREST REGISTERED</div><h2>We’ll save you a spot.</h2><p className="payment-hint">Our team will reach out on WhatsApp with group options and the best available price.</p><button className="submit-btn" onClick={() => setInterestOpen(false)} data-testid="close-interest-success-button">Back to passes</button></> : <><div className="modal-kicker">GROUP BOOKINGS</div><h2>Bring the whole crew.</h2><p className="payment-hint">Tell us how many friends are coming and we’ll help you sort the best deal.</p><form onSubmit={submitInterest}><label>YOUR NAME<input name="name" value={interest.name} onChange={updateInterest} placeholder="Full name" data-testid="interest-name-input"/></label><label>PHONE NUMBER<input name="phone" value={interest.phone} onChange={updateInterest} placeholder="10-digit mobile number" data-testid="interest-phone-input"/></label><label>HOW MANY PEOPLE? <span>(optional)</span><input name="notes" value={interest.notes} onChange={updateInterest} placeholder="e.g. 8 friends" data-testid="interest-notes-input"/></label><button className="submit-btn" type="submit" data-testid="submit-interest-button">Register interest <ArrowUpRight size={18}/></button></form></>}</div></div>}
   </div>;
+}
+
+function AppRouter() {
+  const location = useLocation();
+  if (location.hash?.includes("session_id=")) return <AuthCallback />;
+  return <PartyPage />;
+}
+
+function App() {
+  return <BrowserRouter><AppRouter /></BrowserRouter>;
 }
 
 export default App;

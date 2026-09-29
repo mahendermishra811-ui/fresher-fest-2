@@ -1,6 +1,7 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException, Request
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
+from starlette.responses import JSONResponse
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
@@ -8,7 +9,8 @@ from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+import requests
 
 
 ROOT_DIR = Path(__file__).parent
@@ -37,6 +39,16 @@ class StatusCheck(BaseModel):
 class StatusCheckCreate(BaseModel):
     client_name: str
 
+class User(BaseModel):
+    user_id: str
+    email: str
+    name: str
+    picture: str = ""
+    is_admin: bool = False
+
+class SessionExchange(BaseModel):
+    session_id: str
+
 class BookingCreate(BaseModel):
     name: str
     phone: str
@@ -61,6 +73,8 @@ class Booking(BaseModel):
     notes: str = ""
     status: str = "pending_review"
     created_at: str
+    user_id: str = ""
+    profile_picture: str = ""
 
 class InterestCreate(BaseModel):
     name: str
@@ -76,18 +90,94 @@ class Interest(InterestCreate):
 async def root():
     return {"message": "DU SOL Freshers 2026 booking API"}
 
+def _is_admin(email: str) -> bool:
+    allowed = {item.strip().lower() for item in os.environ.get("ADMIN_EMAILS", "").split(",") if item.strip()}
+    return email.lower() in allowed
+
+async def current_user(request: Request, admin_only: bool = False) -> dict:
+    token = request.cookies.get("session_token")
+    if not token:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+    if not token:
+        raise HTTPException(status_code=401, detail="Sign-in required")
+    session = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
+    if not session:
+        raise HTTPException(status_code=401, detail="Session not found")
+    expires_at = session.get("expires_at")
+    if isinstance(expires_at, str):
+        expires_at = datetime.fromisoformat(expires_at)
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at < datetime.now(timezone.utc):
+        raise HTTPException(status_code=401, detail="Session expired")
+    user = await db.users.find_one({"user_id": session["user_id"]}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    if admin_only and not user.get("is_admin", False):
+        raise HTTPException(status_code=403, detail="Organiser access required")
+    return user
+
+@api_router.post("/auth/session", response_model=User)
+async def exchange_session(input: SessionExchange):
+    try:
+        auth_response = requests.get(
+            "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
+            headers={"X-Session-ID": input.session_id}, timeout=15,
+        )
+        auth_response.raise_for_status()
+        profile = auth_response.json()
+    except requests.RequestException as exc:
+        logger.warning("Emergent auth exchange failed: %s", exc)
+        raise HTTPException(status_code=401, detail="Google sign-in could not be completed") from exc
+    email = profile.get("email", "").strip().lower()
+    if not email or not profile.get("id") or not profile.get("session_token"):
+        raise HTTPException(status_code=401, detail="Incomplete Google profile")
+    existing = await db.users.find_one({"email": email}, {"_id": 0})
+    user_id = existing.get("user_id") if existing else f"user_{uuid.uuid4().hex[:12]}"
+    user_doc = {
+        "user_id": user_id, "email": email, "name": profile.get("name", "DU SOL Guest"),
+        "picture": profile.get("picture", ""), "is_admin": _is_admin(email),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.users.update_one({"user_id": user_id}, {"$set": user_doc}, upsert=True)
+    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    await db.user_sessions.delete_many({"user_id": user_id})
+    await db.user_sessions.insert_one({"user_id": user_id, "session_token": profile["session_token"], "expires_at": expires_at.isoformat(), "created_at": datetime.now(timezone.utc).isoformat()})
+    response = JSONResponse(content=User(**user_doc).model_dump())
+    response.set_cookie("session_token", profile["session_token"], max_age=604800, httponly=True, secure=True, samesite="none", path="/")
+    return response
+
+@api_router.get("/auth/me", response_model=User)
+async def auth_me(request: Request):
+    return await current_user(request)
+
+@api_router.post("/auth/logout")
+async def auth_logout(request: Request):
+    token = request.cookies.get("session_token")
+    if token:
+        await db.user_sessions.delete_one({"session_token": token})
+    response = JSONResponse(content={"ok": True})
+    response.delete_cookie("session_token", path="/")
+    return response
+
 @api_router.post("/bookings", response_model=Booking)
-async def create_booking(input: BookingCreate):
+async def create_booking(input: BookingCreate, request: Request):
+    user = await current_user(request)
+    booking_data = input.model_dump()
+    booking_data.update({"email": user["email"], "user_id": user["user_id"], "profile_picture": user.get("picture", "")})
     booking = Booking(
         booking_id=f"SOL26-{uuid.uuid4().hex[:6].upper()}",
-        **input.model_dump(),
+        **booking_data,
         created_at=datetime.now(timezone.utc).isoformat(),
     )
     await db.bookings.insert_one(booking.model_dump())
     return booking
 
 @api_router.get("/bookings", response_model=List[Booking])
-async def get_bookings():
+async def get_bookings(request: Request):
+    await current_user(request, admin_only=True)
     return await db.bookings.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
 
 @api_router.post("/interests", response_model=Interest)
@@ -101,7 +191,8 @@ async def create_interest(input: InterestCreate):
     return interest
 
 @api_router.get("/interests", response_model=List[Interest])
-async def get_interests():
+async def get_interests(request: Request):
+    await current_user(request, admin_only=True)
     return await db.interests.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
 
 @api_router.post("/status", response_model=StatusCheck)
@@ -134,7 +225,8 @@ app.include_router(api_router)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=[origin for origin in os.environ.get('CORS_ORIGINS', '*').split(',') if origin != '*'],
+    allow_origin_regex=r"https://.*",
     allow_methods=["*"],
     allow_headers=["*"],
 )
