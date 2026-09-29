@@ -6,19 +6,21 @@ import "@/App.css";
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const passTiers = [
-  { id: "silver", number: "01", name: "Silver Solo", tagline: "For the one who starts the story", single: 799, couple: 1399, perks: ["Party entry", "Unlimited buffet", "Mocktail welcome drink"], tone: "silver" },
-  { id: "gold", number: "02", name: "Gold Couple", tagline: "Bring your favourite plus one", single: 1299, couple: 2199, perks: ["Priority entry", "Unlimited buffet + mocktails", "Dance floor fast lane"], tone: "gold", popular: true },
-  { id: "diamond", number: "03", name: "Diamond VIP", tagline: "The full night, turned all the way up", single: 2499, couple: 3999, perks: ["VIP lounge access", "Premium bar counters", "Front stage viewing"], tone: "diamond" },
+  { id: "silver", number: "01", name: "Early Birds", tagline: "The best price for the quickest ones", single: 1299, couple: 2199, perks: ["Party entry", "Unlimited buffet", "Mocktail welcome drink"], tone: "silver" },
+  { id: "gold", number: "02", name: "Not Late", tagline: "Still early enough to lock it in", single: 1499, couple: 2599, perks: ["Priority entry", "Unlimited buffet + mocktails", "Dance floor fast lane"], tone: "gold", popular: true },
+  { id: "diamond", number: "03", name: "Last Minute Arrivals", tagline: "For the ones who make an entrance", single: 1999, couple: 2999, perks: ["VIP lounge access", "Premium bar counters", "Front stage viewing"], tone: "diamond" },
 ];
 
 const getLivePrice = (base, couple = false) => {
-  const daysLeft = Math.ceil((new Date("2026-10-18") - new Date()) / 86400000);
-  if (daysLeft > 18) return base;
-  if (daysLeft > 7) return base + (couple ? 300 : 200);
-  return base + (couple ? 600 : 400);
+  const today = new Date();
+  const earlyBirdEnds = new Date("2026-10-05T23:59:59");
+  const notLateEnds = new Date("2026-10-20T23:59:59");
+  if (today <= earlyBirdEnds) return couple ? 2199 : 1299;
+  if (today <= notLateEnds) return couple ? 2599 : 1499;
+  return couple ? 2999 : 1999;
 };
 const getCountdown = () => {
-  const difference = Math.max(0, new Date("2026-10-18T16:00:00") - new Date());
+  const difference = Math.max(0, new Date("2026-10-25T16:00:00") - new Date());
   return { days: Math.floor(difference / 86400000), hours: Math.floor((difference / 3600000) % 24), minutes: Math.floor((difference / 60000) % 60) };
 };
 
@@ -51,7 +53,7 @@ function App() {
   };
   const submitInterest = async (e) => { e.preventDefault(); if (!interest.name || !interest.phone) return; await axios.post(`${API}/interests`, interest); setInterestSent(true); };
 
-  const whatsapp = "https://wa.me/919999999999?text=Hi%20DU%20SOL%20Freshers%20team%2C%20I%20want%20to%20book%20passes%20for%20October%2018%2C%202026.";
+  const whatsapp = "https://wa.me/919999999999?text=Hi%20DU%20SOL%20Freshers%20team%2C%20I%20want%20to%20book%20passes%20for%20October%2025%2C%202026.";
 
   return <div className="site-shell">
     <nav className="nav-wrap" data-testid="main-navigation">
@@ -69,7 +71,7 @@ function App() {
           <h1>YOUR<br/><em>FIRST</em><br/>NIGHT OUT.</h1>
           <p className="hero-text">A neon-soaked celebration for the DU SOL Class of 2026. Come for the pass. Leave with the story.</p>
           <div className="hero-actions"><a href="#passes" className="primary-btn" data-testid="hero-get-pass-button">Get your pass <ArrowUpRight size={18}/></a><a href={whatsapp} target="_blank" rel="noreferrer" className="text-link" data-testid="hero-whatsapp-link"><MessageCircle size={17}/> Talk to the team</a></div>
-          <div className="hero-meta"><span><b>18</b> OCT ’26</span><span className="meta-line"/><span><b>04:00</b> PM ONWARDS</span></div><div className="countdown" data-testid="event-countdown"><span>COUNTDOWN</span><b>{String(timeLeft.days).padStart(2,"0")}</b><i>:</i><b>{String(timeLeft.hours).padStart(2,"0")}</b><i>:</i><b>{String(timeLeft.minutes).padStart(2,"0")}</b><small>DAYS&nbsp;&nbsp;&nbsp; HRS&nbsp;&nbsp;&nbsp; MIN</small></div>
+          <div className="hero-meta"><span><b>25</b> OCT ’26</span><span className="meta-line"/><span><b>04:00</b> PM ONWARDS</span></div><div className="countdown" data-testid="event-countdown"><span>COUNTDOWN</span><b>{String(timeLeft.days).padStart(2,"0")}</b><i>:</i><b>{String(timeLeft.hours).padStart(2,"0")}</b><i>:</i><b>{String(timeLeft.minutes).padStart(2,"0")}</b><small>DAYS&nbsp;&nbsp;&nbsp; HRS&nbsp;&nbsp;&nbsp; MIN</small></div>
         </div>
         <div className="hero-visual reveal reveal-delay"><div className="hero-image"><img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=85" alt="Neon festival crowd"/><div className="image-shade"/><div className="hero-sticker"><span>DU SOL</span><strong>26</strong><span>ALL NIGHT</span></div><div className="hero-caption"><span>01 / 03</span><span>TURN IT UP <ArrowUpRight size={14}/></span></div></div></div>
       </section>
@@ -83,7 +85,7 @@ function App() {
           {tier.popular && <div className="popular-tag"><Zap size={13}/> MOST LOVED</div>}<div className="pass-top"><span className="pass-number">{tier.number}</span><span className="pass-type">{tier.id === "diamond" ? "VIP ACCESS" : "ENTRY PASS"}</span></div><h3>{tier.name}</h3><p className="pass-tagline">{tier.tagline}</p><div className="price-pair"><div><small>SINGLE</small><strong>₹{getLivePrice(tier.single).toLocaleString("en-IN")}</strong></div><div><small>COUPLE</small><strong>₹{getLivePrice(tier.couple, true).toLocaleString("en-IN")}</strong></div></div><ul>{tier.perks.map((perk) => <li key={perk}><Check size={16}/>{perk}</li>)}</ul><button className="pass-btn" onClick={() => openBooking(tier)} data-testid={`select-${tier.id}-pass-button`}>Select this pass <ArrowUpRight size={17}/></button>
         </article>)}</div><p className="pass-footnote"><span className="green-dot"/> All prices include taxes &amp; booking support <span className="foot-divider"/> Need a group booking? <button className="inline-action" onClick={() => setInterestOpen(true)} data-testid="group-interest-button">Register your interest</button></p></section>
 
-      <section className="details section-pad" id="details"><div className="section-label">SAVE THE DATE / 03</div><div className="details-grid"><div className="detail-lead"><h2>One night.<br/><em>Zero regrets.</em></h2><a href="#passes" className="outline-btn" data-testid="details-choose-pass-button">Choose your pass <ArrowUpRight size={17}/></a></div><div className="detail-list"><div className="detail-item"><span>WHEN</span><strong>Sunday, October 18, 2026</strong><small>4:00 PM onwards · Doors close at 10:30 PM</small></div><div className="detail-item"><span>WHERE</span><strong>Kingdom Arena, North Campus</strong><small><MapPin size={14}/> Delhi, India</small></div><div className="detail-item"><span>WHAT’S ON</span><strong>DJ Ravish × DJ Krypton</strong><small>Multi-cuisine buffet · Premium mocktails · Bar counters</small></div></div></div></section>
+      <section className="details section-pad" id="details"><div className="section-label">SAVE THE DATE / 03</div><div className="details-grid"><div className="detail-lead"><h2>One night.<br/><em>Zero regrets.</em></h2><a href="#passes" className="outline-btn" data-testid="details-choose-pass-button">Choose your pass <ArrowUpRight size={17}/></a></div><div className="detail-list"><div className="detail-item"><span>WHEN</span><strong>Sunday, October 25, 2026</strong><small>4:00 PM onwards · Doors close at 10:30 PM</small></div><div className="detail-item"><span>WHERE</span><strong>Kingdom Arena, North Campus</strong><small><MapPin size={14}/> Delhi, India</small></div><div className="detail-item"><span>WHAT’S ON</span><strong>DJ Ravish × DJ Krypton</strong><small>Multi-cuisine buffet · Premium mocktails · Bar counters</small></div></div></div></section>
       <section className="experience-image section-pad"><div className="wide-image"><img src="https://images.unsplash.com/photo-1545128485-c400e7702796?auto=format&fit=crop&w=1600&q=85" alt="Party lights and crowd"/><div className="wide-overlay"><span>THE ROOM WILL BE LOUD.</span><b>BE THERE.</b></div></div></section>
     </main>
     <footer><div className="brand"><span className="brand-mark">DS</span><span>DU SOL <b>FRESHERS</b></span></div><span>© 2026 DU SOL FRESHERS · MADE FOR THE CLASS OF ’26</span><a href="https://instagram.com" target="_blank" rel="noreferrer" data-testid="instagram-link"><Instagram size={18}/></a></footer>

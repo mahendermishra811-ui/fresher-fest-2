@@ -11,7 +11,7 @@ i have to sell my passes for party
 
 ## Implemented
 - Hero, party experience, event details, DJ/food/mocktail/bar highlights, venue and date sections.
-- Three pass tiers with single/couple variants and date-based price increases.
+- Three automatic pass windows: Early Birds (₹1,299/₹2,199 through October 5), Not Late (₹1,499/₹2,599 through October 20), and Last Minute Arrivals (₹1,999/₹2,999 through October 25).
 - Live event countdown and pass selection modal with UPI ID, copy control, booking validation and confirmation reference.
 - Group booking interest form and persisted interest endpoint.
 - Responsive mobile navigation, accessible controls, descriptive test IDs, and WhatsApp CTAs.

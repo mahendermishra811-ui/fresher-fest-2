@@ -41,11 +41,11 @@
   },
   "instructions_to_main_agent": [
     "Build a gorgeous, high-conversion, futuristic pass booking portal for DU SOL Freshers Party 2026.",
-    "Include 3 Pass Tiers (Silver Solo, Gold Squad / Couple, VIP All-Access Diamond) with date-based price increases and urgency countdown timers.",
+    "Include 3 automatic pass windows (Early Birds, Not Late, Last Minute Arrivals) with exact date-based price increases and urgency countdown timers.",
     "Provide interactive pass selection supporting Single and Couple pass options.",
     "Implement an easy manual payment proof upload workflow with QR code UPI scanning instructions (GPay/PhonePe/Paytm UPI ID: dusol2026@oksbi).",
     "Provide instant pass confirmation state with generated Pass ID QR ticket, WhatsApp organiser direct contact CTA (pre-filled message), and booking interest form for group registration.",
-    "Include full party details: Date (October 18, 2026), Timings (4:00 PM onwards), Venue (Kingdom Arena, North Campus Delhi), Star DJ (DJ Ravish & DJ Krypton), Unlimited Multi-cuisine Buffet, Premium Mocktails & Bar Counters.",
+    "Include full party details: Date (October 25, 2026), Timings (4:00 PM onwards), Venue (Kingdom Arena, North Campus Delhi), Star DJ (DJ Ravish & DJ Krypton), Unlimited Multi-cuisine Buffet, Premium Mocktails & Bar Counters.",
     "Ensure all interactive elements have data-testid attributes for rigorous testing.",
     "Add admin view / toggle to review submitted booking interests and manual payment proofs."
   ]
