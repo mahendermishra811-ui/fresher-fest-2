@@ -65,7 +65,7 @@ function App() {
 
     <main id="top">
       <section className="hero section-pad">
-        <div className="hero-copy reveal"><div className="eyebrow"><span className="live-dot"/> Delhi’s loudest farewell to ordinary</div>
+        <div className="hero-copy reveal"><div className="eyebrow"><span className="live-dot"/> Delhi’s loudest Freshers celebration</div>
           <h1>YOUR<br/><em>FIRST</em><br/>NIGHT OUT.</h1>
           <p className="hero-text">A neon-soaked celebration for the DU SOL Class of 2026. Come for the pass. Leave with the story.</p>
           <div className="hero-actions"><a href="#passes" className="primary-btn" data-testid="hero-get-pass-button">Get your pass <ArrowUpRight size={18}/></a><a href={whatsapp} target="_blank" rel="noreferrer" className="text-link" data-testid="hero-whatsapp-link"><MessageCircle size={17}/> Talk to the team</a></div>
