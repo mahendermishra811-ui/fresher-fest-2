@@ -38,8 +38,9 @@ export default function BookingModal({ tier, variant, setVariant, form, setForm,
         { withCredentials: true }
       );
       onSubmitted(response.data);
-    } catch {
-      setError("Something went wrong. Please try again or WhatsApp us directly.");
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      setError(typeof detail === "string" ? detail : "Something went wrong. Please try again or WhatsApp us directly.");
     }
     setBusy(false);
   };

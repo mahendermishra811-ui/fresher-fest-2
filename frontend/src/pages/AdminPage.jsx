@@ -6,6 +6,7 @@ import { API, startGoogleSignIn } from "@/config";
 import { Logo } from "@/components/Logo";
 import SettingsPanel from "@/components/admin/SettingsPanel";
 import ExportButton from "@/components/admin/ExportButton";
+import PassActions from "@/components/admin/PassActions";
 
 function Screenshot({ path }) {
   const [url, setUrl] = useState("");
@@ -144,7 +145,7 @@ export default function AdminPage() {
         <div className="table-wrap">
           <table className="data-table" data-testid="bookings-table">
             <thead>
-              <tr><th>Reference</th><th>Guest</th><th>Pass</th><th>Amount</th><th>UPI ref</th><th>Screenshot</th><th>Status</th><th>Action</th></tr>
+              <tr><th>Reference</th><th>Guest</th><th>Pass</th><th>Amount</th><th>UPI ref</th><th>Screenshot</th><th>Status</th><th>Action</th><th>Ticket</th></tr>
             </thead>
             <tbody>
               {bookings.map((booking) => (
@@ -164,6 +165,7 @@ export default function AdminPage() {
                       <button className="icon-btn reject" onClick={() => setStatus(booking.booking_id, "rejected")} aria-label="Reject booking" data-testid={`reject-${booking.booking_id}`}><X size={15} /></button>
                     )}
                   </td>
+                  <td><PassActions booking={booking} /></td>
                 </tr>
               ))}
             </tbody>

@@ -121,10 +121,54 @@ class Booking(BaseModel):
     created_at: str
     user_id: str = ""
     profile_picture: str = ""
+    pass_token: str = ""
+    checked_in_at: str = ""
+
+
+class PassView(BaseModel):
+    booking_id: str
+    name: str
+    pass_type: str
+    pass_variant: str
+    quantity: int
+    status: str
+    checked_in_at: str = ""
+    phone: str = ""
+    payment_reference: str = ""
+    amount: int = 0
+    email: str = ""
+    can_check_in: bool = False
 
 
 class BookingStatusUpdate(BaseModel):
     status: str
+
+
+IST = timezone(timedelta(hours=5, minutes=30))
+EVENT_YEAR = 2026
+PASS_TIERS = {
+    "Early Bird Passes": {"start": (1, 1), "end": (10, 5), "single": 1299, "couple": 2199},
+    "Not Late Passes": {"start": (10, 6), "end": (10, 20), "single": 1499, "couple": 2599},
+    "Last Minute Arrivals": {"start": (10, 21), "end": (10, 25), "single": 1999, "couple": 2999},
+}
+
+
+def validate_pass_selection(pass_type: str, pass_variant: str, amount: int, quantity: int):
+    tier = PASS_TIERS.get(pass_type)
+    if not tier:
+        raise HTTPException(status_code=400, detail="Unknown pass type")
+    if pass_variant not in ("single", "couple"):
+        raise HTTPException(status_code=400, detail="Pass must be single or couple")
+    today = datetime.now(IST).date()
+    start = datetime(EVENT_YEAR, *tier["start"], tzinfo=IST).date()
+    end = datetime(EVENT_YEAR, *tier["end"], tzinfo=IST).date()
+    if today < start:
+        raise HTTPException(status_code=400, detail=f"{pass_type} open on {start.strftime('%d %B')}. Please pick the pass that is selling now.")
+    if today > end:
+        raise HTTPException(status_code=400, detail=f"{pass_type} closed on {end.strftime('%d %B')}. Please pick the pass that is selling now.")
+    expected_qty = 2 if pass_variant == "couple" else 1
+    if amount != tier[pass_variant] or quantity != expected_qty:
+        raise HTTPException(status_code=400, detail="Pass price has changed — please refresh and try again")
 
 
 class InterestCreate(BaseModel):
@@ -323,6 +367,7 @@ async def download_file(path: str, request: Request):
 async def create_booking(input: BookingCreate, request: Request):
     user = await current_user(request)
     booking_data = input.model_dump()
+    validate_pass_selection(booking_data["pass_type"], booking_data["pass_variant"], booking_data["amount"], booking_data["quantity"])
     if booking_data.get("payment_screenshot"):
         record = await db.files.find_one({"storage_path": booking_data["payment_screenshot"], "user_id": user["user_id"], "is_deleted": False})
         if not record:
@@ -332,6 +377,7 @@ async def create_booking(input: BookingCreate, request: Request):
         booking_id=f"SOL26-{uuid.uuid4().hex[:6].upper()}",
         **booking_data,
         created_at=datetime.now(timezone.utc).isoformat(),
+        pass_token=uuid.uuid4().hex,
     )
     await db.bookings.insert_one(booking.model_dump())
     asyncio.create_task(send_booking_alert(booking))
@@ -344,7 +390,7 @@ async def get_bookings(request: Request):
     return await db.bookings.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
 
 
-BOOKING_CSV_COLUMNS = ["booking_id", "created_at", "status", "name", "phone", "email", "pass_type", "pass_variant", "quantity", "amount", "payment_reference", "payment_screenshot", "notes"]
+BOOKING_CSV_COLUMNS = ["booking_id", "created_at", "status", "checked_in_at", "name", "phone", "email", "pass_type", "pass_variant", "quantity", "amount", "payment_reference", "payment_screenshot", "notes"]
 INTEREST_CSV_COLUMNS = ["interest_id", "created_at", "name", "phone", "notes"]
 
 
@@ -360,6 +406,42 @@ async def export_interests(request: Request):
     await current_user(request, admin_only=True)
     rows = await db.interests.find({}, {"_id": 0}).sort("created_at", -1).to_list(5000)
     return _csv_response(rows, INTEREST_CSV_COLUMNS, "solstice26-group-interests.csv")
+
+
+async def _optional_admin(request: Request) -> bool:
+    try:
+        user = await current_user(request)
+    except HTTPException:
+        return False
+    return bool(user.get("is_admin"))
+
+
+@api_router.get("/pass/{pass_token}", response_model=PassView)
+async def view_pass(pass_token: str, request: Request):
+    booking = await db.bookings.find_one({"pass_token": pass_token}, {"_id": 0})
+    if not booking:
+        raise HTTPException(status_code=404, detail="Pass not found")
+    is_admin = await _optional_admin(request)
+    public = {k: booking.get(k, "") for k in ("booking_id", "name", "pass_type", "pass_variant", "quantity", "status", "checked_in_at")}
+    if is_admin:
+        public.update({k: booking.get(k, "") for k in ("phone", "payment_reference", "amount", "email")})
+        public["can_check_in"] = booking["status"] == "confirmed" and not booking.get("checked_in_at")
+    return PassView(**public)
+
+
+@api_router.post("/pass/{pass_token}/checkin", response_model=PassView)
+async def check_in_pass(pass_token: str, request: Request):
+    await current_user(request, admin_only=True)
+    booking = await db.bookings.find_one({"pass_token": pass_token}, {"_id": 0})
+    if not booking:
+        raise HTTPException(status_code=404, detail="Pass not found")
+    if booking["status"] != "confirmed":
+        raise HTTPException(status_code=400, detail="Only confirmed passes can be checked in")
+    if booking.get("checked_in_at"):
+        raise HTTPException(status_code=400, detail=f"Already checked in at {booking['checked_in_at']}")
+    now = datetime.now(timezone.utc).isoformat()
+    await db.bookings.update_one({"pass_token": pass_token}, {"$set": {"checked_in_at": now}})
+    return await view_pass(pass_token, request)
 
 
 @api_router.get("/settings")

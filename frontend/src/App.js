@@ -6,6 +6,7 @@ import "@/App.css";
 import { API } from "@/config";
 import PartyPage from "@/pages/PartyPage";
 import AdminPage from "@/pages/AdminPage";
+import PassPage from "@/pages/PassPage";
 
 function AuthCallback() {
   const location = useLocation();
@@ -46,6 +47,7 @@ function Routed() {
     <Routes>
       <Route path="/" element={<PartyPage />} />
       <Route path="/admin" element={<AdminPage />} />
+      <Route path="/pass/:token" element={<PassPage />} />
     </Routes>
   );
 }

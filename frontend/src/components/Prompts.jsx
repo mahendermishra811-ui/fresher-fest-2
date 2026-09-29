@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import axios from "axios";
-import { ArrowUpRight, Check, MessageCircle, X } from "lucide-react";
+import { ArrowUpRight, Check, MessageCircle, Ticket, X } from "lucide-react";
 import { API, useSettings } from "@/config";
 
 export function AuthPrompt({ onClose, onSignIn }) {
@@ -20,21 +21,28 @@ export function AuthPrompt({ onClose, onSignIn }) {
 }
 
 export function Confirmation({ booking, onClose }) {
-  const { whatsapp_url: WHATSAPP_URL } = useSettings();
+  const { whatsapp_number } = useSettings();
+  const passUrl = `${window.location.origin}/pass/${booking.pass_token}`;
+  const message = encodeURIComponent(
+    `Hi! I just booked a Solstice '26 pass.\nReference: ${booking.booking_id}\nName: ${booking.name}\nPass: ${booking.pass_type} (${booking.pass_variant})\nAmount: ₹${booking.amount}\nUPI ref: ${booking.payment_reference}\nMy pass: ${passUrl}`
+  );
   return (
     <div className="modal-backdrop" data-testid="confirmation-modal">
       <div className="confirmation-card">
         <div className="success-icon"><Check size={30} /></div>
         <div className="modal-kicker">BOOKING RECEIVED</div>
         <h2>You’re on the list.</h2>
-        <p>We’re checking your payment and will send your confirmed pass to <b>{booking.phone}</b> on WhatsApp.</p>
+        <p>We’re checking your payment and will confirm your pass on <b>{booking.phone}</b> via WhatsApp. Send us your details now so we can verify faster.</p>
         <div className="pass-id">
           <span>YOUR REFERENCE</span>
           <strong data-testid="booking-reference">{booking.booking_id}</strong>
         </div>
-        <a href={WHATSAPP_URL} target="_blank" rel="noreferrer" className="submit-btn" data-testid="confirmation-whatsapp-button">
+        <a href={`https://wa.me/${whatsapp_number}?text=${message}`} target="_blank" rel="noreferrer" className="submit-btn" data-testid="confirmation-whatsapp-button">
           <MessageCircle size={18} /> Send details on WhatsApp
         </a>
+        <Link to={`/pass/${booking.pass_token}`} className="google-btn" data-testid="view-pass-button">
+          <Ticket size={16} /> View my digital pass
+        </Link>
         <button className="text-link close-confirm" onClick={onClose} data-testid="close-confirmation-button">
           Back to the party page
         </button>
