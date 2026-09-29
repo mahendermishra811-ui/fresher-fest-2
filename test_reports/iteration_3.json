@@ -1,0 +1,23 @@
+{
+  "summary": "Iteration 3: validated new settings endpoints, CSV exports, Twilio-optional booking alerts and admin Settings UI. 19/19 backend tests pass (test_settings_and_exports.py) and all frontend flows verified via Playwright: public /api/settings, admin auth gating (401 anon, 403 guest) on /settings/admin, PUT /settings, /bookings/export, /interests/export; whatsapp normalisation ('+91 98765 43210' -> '919876543210'); invalid UPI/short whatsapp rejected 400/422; settings restored to defaults; CSV headers + content-disposition attachment + comma-quoting verified; guest can POST /api/bookings with Twilio unconfigured (no 500) and last_alert stays empty. Frontend: nav-whatsapp/hero-whatsapp-link contain 917065319679, booking modal upi-id-value=7065319679@fam, /admin gate for anon, admin session shows tab-settings with correct values and 'Not connected yet' alerts status, save + restore both show success message, export-bookings-button downloads solstice26-bookings.csv, export-interests-button downloads solstice26-group-interests.csv, anon booking flow shows 'Continue with Google' CTA.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_settings_and_exports.py",
+    "/app/test_reports/pytest/pytest_iter3.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "send_booking_alert catches exceptions but any Twilio failure is only stored in db.settings.last_alert; consider surfacing to admin UI (already read but wording implies success only).",
+    "PUT /settings does not validate that whatsapp digits form a plausible country-prefixed number beyond length>=10; acceptable for MVP.",
+    "server.py is ~470 lines; still monolithic. Consider splitting routers (auth/bookings/settings/exports) as it grows."
+  ],
+  "updated_files": ["/app/backend/tests/test_settings_and_exports.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "Bearer tmp_admin_tok_123 (admin mahendermishra811@gmail.com) and tmp_guest_tok_123 (guest@example.com) via Authorization header or session_token cookie. Sessions refreshed to +1h during this run.",
+  "seed_data_creation": "Created one TEST interest ('TEST, Comma User', phone 9999999999) via public POST /api/interests to validate CSV quoting, and one guest booking 'TEST Alert Guest' via POST /api/bookings. Settings were mutated then restored to defaults (upi_id=7065319679@fam, whatsapp_number=917065319679).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "New tests live at /app/backend/tests/test_settings_and_exports.py. If sessions expire (1h TTL), refresh with mongosh update on user_sessions. Twilio env vars are intentionally unset; last_alert remaining empty is expected. Some TEST_ interests/bookings remain in the DB from this run; main agent to clean if desired.",
+  "rca of the issue": "N/A — no failing scenarios."
+}

@@ -13,7 +13,7 @@
 - Not Late Passes (6–20 Oct): Single ₹1499 / Couple ₹2599.
 - Last Minute Arrivals — Diamond VIP (21–25 Oct): Single ₹1999 / Couple ₹2999.
 - Date-window availability enforced in UI (SELLING NOW / OPENS SOON / CLOSED).
-- Manual UPI payment (dusol2026@oksbi) with reference capture; no payment gateway.
+- Manual UPI payment with reference capture; no payment gateway. UPI ID + WhatsApp number are organiser-editable in /admin → Settings (stored in `settings` collection; code defaults: 7065319679@fam / 917065319679).
 - Google sign-in only at booking confirmation; name/email prefill; phone mandatory.
 - WhatsApp contact CTA; group-booking interest capture.
 - Admin access restricted by email allowlist (`ADMIN_EMAILS`).
@@ -26,14 +26,13 @@
 - 2026-09-29: payment screenshot upload (Emergent object storage), owner-or-admin file access, screenshot thumbnails in admin table.
 - 2026-09-29: design overhaul — SOLSTICE '26 brand, custom SVG logo + favicon, kinetic masked hero, Lenis smooth scroll, framer-motion reveals, editorial marquee, grain overlay, parallax images, Punjabi Bagh venue copy. Modular React structure (pages + components).
 - 2026-09-29: production build passes; responsive verified at 375/768/1366.
+- 2026-09-29 (iteration 3): real organiser UPI ID (7065319679@fam) and WhatsApp (917065319679) applied; organiser-editable settings (GET /api/settings public, GET /api/settings/admin + PUT /api/settings admin-only); frontend `useSettings()` hook drives UPI box + all WhatsApp links. CSV exports (GET /api/bookings/export, /api/interests/export, admin-only). WhatsApp booking alert via Twilio (env-gated: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM — NOT configured yet, alerts silently skipped; status shown in Settings tab). Admin UI: Settings tab + export buttons. Tested: 19/19 backend tests + all frontend flows (test_reports/iteration_3.json). Confirmed anonymous POST /api/bookings = 401.
 
 ## Backlog
-- P0: Real end-to-end Google OAuth sign-in + booking test by the organiser in preview.
-- P1: Real WhatsApp number (currently placeholder 919999999999) — user must supply.
-- P1: UPI ID is placeholder (dusol2026@oksbi) — confirm/replace with organiser's real UPI.
-- P2: WhatsApp notification to organiser on new booking (needs Twilio/WhatsApp Business).
-- P2: Export bookings to CSV.
+- P0: Real end-to-end Google OAuth sign-in + booking test by the organiser in preview (only the user can do this).
+- P1: Turn on WhatsApp booking alerts — needs Twilio credentials from user (Account SID, Auth Token, WhatsApp-enabled sender number) added to backend/.env.
 - P2: Server-side pass-window enforcement (currently client-side).
+- P2: Digital/shareable pass ticket after confirmation.
 
 ## Data note
 Live site (once deployed) has its own database; bookings made in preview do not appear on the live site.
