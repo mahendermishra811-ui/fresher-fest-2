@@ -6,18 +6,13 @@ import "@/App.css";
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const passTiers = [
-  { id: "silver", number: "01", name: "Early Birds", tagline: "The best price for the quickest ones", single: 1299, couple: 2199, perks: ["Party entry", "Unlimited buffet", "Mocktail welcome drink"], tone: "silver" },
-  { id: "gold", number: "02", name: "Not Late", tagline: "Still early enough to lock it in", single: 1499, couple: 2599, perks: ["Priority entry", "Unlimited buffet + mocktails", "Dance floor fast lane"], tone: "gold", popular: true },
-  { id: "diamond", number: "03", name: "Last Minute Arrivals", tagline: "For the ones who make an entrance", single: 1999, couple: 2999, perks: ["VIP lounge access", "Premium bar counters", "Front stage viewing"], tone: "diamond" },
+  { id: "silver", number: "01", name: "Early Bird Passes", window: "Active now · closes 5 October", tagline: "The best price for the quickest ones", single: 1299, couple: 2199, perks: ["Party entry", "Unlimited buffet", "Mocktail welcome drink"], tone: "silver" },
+  { id: "gold", number: "02", name: "Not Late Passes", window: "6 October – 20 October", tagline: "Still early enough to lock it in", single: 1499, couple: 2599, perks: ["Priority entry", "Unlimited buffet + mocktails", "Dance floor fast lane"], tone: "gold", popular: true },
+  { id: "diamond", number: "03", name: "Last Minute Arrivals", window: "21 October – 25 October · Diamond VIP", tagline: "For the ones who make an entrance", single: 1999, couple: 2999, perks: ["VIP lounge access", "Premium bar counters", "Front stage viewing"], tone: "diamond" },
 ];
 
 const getLivePrice = (base, couple = false) => {
-  const today = new Date();
-  const earlyBirdEnds = new Date("2026-10-05T23:59:59");
-  const notLateEnds = new Date("2026-10-20T23:59:59");
-  if (today <= earlyBirdEnds) return couple ? 2199 : 1299;
-  if (today <= notLateEnds) return couple ? 2599 : 1499;
-  return couple ? 2999 : 1999;
+  return base;
 };
 const getCountdown = () => {
   const difference = Math.max(0, new Date("2026-10-25T16:00:00") - new Date());
@@ -82,7 +77,7 @@ function App() {
 
       <section className="passes section-pad" id="passes"><div className="section-heading"><div><div className="section-label">CHOOSE YOUR NIGHT / 02</div><h2>Pick your <em>energy.</em></h2></div><div className="price-note"><Flame size={18}/> Prices rise as the date gets closer</div></div>
         <div className="pass-grid">{passTiers.map((tier) => <article className={`pass-card ${tier.tone} ${tier.popular ? "popular" : ""}`} key={tier.id} data-testid={`pass-card-${tier.id}`}>
-          {tier.popular && <div className="popular-tag"><Zap size={13}/> MOST LOVED</div>}<div className="pass-top"><span className="pass-number">{tier.number}</span><span className="pass-type">{tier.id === "diamond" ? "VIP ACCESS" : "ENTRY PASS"}</span></div><h3>{tier.name}</h3><p className="pass-tagline">{tier.tagline}</p><div className="price-pair"><div><small>SINGLE</small><strong>₹{getLivePrice(tier.single).toLocaleString("en-IN")}</strong></div><div><small>COUPLE</small><strong>₹{getLivePrice(tier.couple, true).toLocaleString("en-IN")}</strong></div></div><ul>{tier.perks.map((perk) => <li key={perk}><Check size={16}/>{perk}</li>)}</ul><button className="pass-btn" onClick={() => openBooking(tier)} data-testid={`select-${tier.id}-pass-button`}>Select this pass <ArrowUpRight size={17}/></button>
+          {tier.popular && <div className="popular-tag"><Zap size={13}/> MOST LOVED</div>}<div className="pass-top"><span className="pass-number">{tier.number}</span><span className="pass-type">{tier.id === "diamond" ? "DIAMOND VIP" : "ENTRY PASS"}</span></div><h3>{tier.name}</h3><p className="pass-window" data-testid={`${tier.id}-pass-window`}>{tier.window}</p><p className="pass-tagline">{tier.tagline}</p><div className="price-pair"><div><small>SINGLE</small><strong>₹{getLivePrice(tier.single).toLocaleString("en-IN")}</strong></div><div><small>COUPLE</small><strong>₹{getLivePrice(tier.couple, true).toLocaleString("en-IN")}</strong></div></div><ul>{tier.perks.map((perk) => <li key={perk}><Check size={16}/>{perk}</li>)}</ul><button className="pass-btn" onClick={() => openBooking(tier)} data-testid={`select-${tier.id}-pass-button`}>Select this pass <ArrowUpRight size={17}/></button>
         </article>)}</div><p className="pass-footnote"><span className="green-dot"/> All prices include taxes &amp; booking support <span className="foot-divider"/> Need a group booking? <button className="inline-action" onClick={() => setInterestOpen(true)} data-testid="group-interest-button">Register your interest</button></p></section>
 
       <section className="details section-pad" id="details"><div className="section-label">SAVE THE DATE / 03</div><div className="details-grid"><div className="detail-lead"><h2>One night.<br/><em>Zero regrets.</em></h2><a href="#passes" className="outline-btn" data-testid="details-choose-pass-button">Choose your pass <ArrowUpRight size={17}/></a></div><div className="detail-list"><div className="detail-item"><span>WHEN</span><strong>Sunday, October 25, 2026</strong><small>4:00 PM onwards · Doors close at 10:30 PM</small></div><div className="detail-item"><span>WHERE</span><strong>Kingdom Arena, North Campus</strong><small><MapPin size={14}/> Delhi, India</small></div><div className="detail-item"><span>WHAT’S ON</span><strong>DJ Ravish × DJ Krypton</strong><small>Multi-cuisine buffet · Premium mocktails · Bar counters</small></div></div></div></section>
