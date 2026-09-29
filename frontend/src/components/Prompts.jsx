@@ -1,7 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { ArrowUpRight, Check, MessageCircle, X } from "lucide-react";
-import { API, WHATSAPP_URL } from "@/config";
+import { API, useSettings } from "@/config";
 
 export function AuthPrompt({ onClose, onSignIn }) {
   return (
@@ -20,6 +20,7 @@ export function AuthPrompt({ onClose, onSignIn }) {
 }
 
 export function Confirmation({ booking, onClose }) {
+  const { whatsapp_url: WHATSAPP_URL } = useSettings();
   return (
     <div className="modal-backdrop" data-testid="confirmation-modal">
       <div className="confirmation-card">

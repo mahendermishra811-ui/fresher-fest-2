@@ -4,6 +4,8 @@ import axios from "axios";
 import { Check, LogOut, Users, Wallet, Ticket, X } from "lucide-react";
 import { API, startGoogleSignIn } from "@/config";
 import { Logo } from "@/components/Logo";
+import SettingsPanel from "@/components/admin/SettingsPanel";
+import ExportButton from "@/components/admin/ExportButton";
 
 function Screenshot({ path }) {
   const [url, setUrl] = useState("");
@@ -124,12 +126,19 @@ export default function AdminPage() {
         <div className="stat-card" data-testid="stat-interests"><Users size={18} /><strong>{interests.length}</strong><span>Group interests</span></div>
       </div>
 
-      <div className="admin-tabs">
-        <button className={`tab-btn ${tab === "bookings" ? "active" : ""}`} onClick={() => setTab("bookings")} data-testid="tab-bookings">Bookings</button>
-        <button className={`tab-btn ${tab === "interests" ? "active" : ""}`} onClick={() => setTab("interests")} data-testid="tab-interests">Group interests</button>
+      <div className="tab-row">
+        <div className="admin-tabs">
+          <button className={`tab-btn ${tab === "bookings" ? "active" : ""}`} onClick={() => setTab("bookings")} data-testid="tab-bookings">Bookings</button>
+          <button className={`tab-btn ${tab === "interests" ? "active" : ""}`} onClick={() => setTab("interests")} data-testid="tab-interests">Group interests</button>
+          <button className={`tab-btn ${tab === "settings" ? "active" : ""}`} onClick={() => setTab("settings")} data-testid="tab-settings">Settings</button>
+        </div>
+        {tab === "bookings" && <ExportButton path="/bookings/export" filename="solstice26-bookings.csv" label="Download bookings CSV" testId="export-bookings-button" />}
+        {tab === "interests" && <ExportButton path="/interests/export" filename="solstice26-group-interests.csv" label="Download group interests CSV" testId="export-interests-button" />}
       </div>
 
       {loadError && <div className="form-error" data-testid="admin-load-error">{loadError}</div>}
+
+      {tab === "settings" && <SettingsPanel />}
 
       {tab === "bookings" && (
         <div className="table-wrap">

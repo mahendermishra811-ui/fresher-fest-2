@@ -1,9 +1,10 @@
 import { useState } from "react";
 import axios from "axios";
 import { ArrowUpRight, Copy, ImagePlus, X } from "lucide-react";
-import { API, UPI_ID } from "@/config";
+import { API, useSettings } from "@/config";
 
 export default function BookingModal({ tier, variant, setVariant, form, setForm, user, onClose, onSubmitted, onNeedAuth }) {
+  const { upi_id: UPI_ID } = useSettings();
   const [error, setError] = useState("");
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -64,7 +65,7 @@ export default function BookingModal({ tier, variant, setVariant, form, setForm,
           </button>
         </div>
         <div className="upi-box">
-          <div><span>PAY VIA UPI</span><strong>{UPI_ID}</strong></div>
+          <div><span>PAY VIA UPI</span><strong data-testid="upi-id-value">{UPI_ID || "Loading…"}</strong></div>
           <button onClick={() => navigator.clipboard?.writeText(UPI_ID)} data-testid="copy-upi-button"><Copy size={15} /> Copy</button>
         </div>
         <p className="payment-hint">Scan in GPay, PhonePe or Paytm, then paste the UPI reference below. A screenshot helps us confirm faster.</p>

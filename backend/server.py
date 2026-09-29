@@ -13,6 +13,9 @@ import uuid
 import asyncio
 from datetime import datetime, timedelta, timezone
 import requests
+import csv
+import io
+from twilio.rest import Client as TwilioClient
 
 
 ROOT_DIR = Path(__file__).parent
@@ -133,6 +136,68 @@ class InterestCreate(BaseModel):
 class Interest(InterestCreate):
     interest_id: str
     created_at: str
+
+
+DEFAULT_SETTINGS = {"upi_id": "dusol2026@oksbi", "whatsapp_number": "919999999999"}
+
+
+class SettingsUpdate(BaseModel):
+    upi_id: str = Field(min_length=3, max_length=80)
+    whatsapp_number: str = Field(min_length=10, max_length=15)
+
+
+class Settings(SettingsUpdate):
+    alerts_configured: bool = False
+    last_alert: str = ""
+
+
+async def get_settings_doc() -> dict:
+    doc = await db.settings.find_one({"key": "site"}, {"_id": 0}) or {}
+    return {**DEFAULT_SETTINGS, **doc}
+
+
+def _twilio_config():
+    sid = os.environ.get("TWILIO_ACCOUNT_SID", "").strip()
+    token = os.environ.get("TWILIO_AUTH_TOKEN", "").strip()
+    sender = os.environ.get("TWILIO_WHATSAPP_FROM", "").strip()
+    return (sid, token, sender) if sid and token and sender else None
+
+
+async def send_booking_alert(booking: "Booking"):
+    config = _twilio_config()
+    if not config:
+        return
+    settings = await get_settings_doc()
+    to_number = settings["whatsapp_number"].lstrip("+")
+    body = (
+        f"New Solstice '26 booking {booking.booking_id}\n"
+        f"{booking.name} · {booking.phone}\n"
+        f"{booking.pass_type} ({booking.pass_variant} x{booking.quantity}) · ₹{booking.amount}\n"
+        f"UPI ref: {booking.payment_reference}\n"
+        f"Screenshot: {'attached' if booking.payment_screenshot else 'none'}\n"
+        f"Review at /admin"
+    )
+    try:
+        sid, token, sender = config
+        await asyncio.to_thread(
+            lambda: TwilioClient(sid, token).messages.create(from_=f"whatsapp:{sender}", to=f"whatsapp:+{to_number}", body=body)
+        )
+        status = f"sent {booking.booking_id} at {datetime.now(timezone.utc).isoformat()}"
+    except Exception as exc:
+        logger.warning("WhatsApp alert failed for %s: %s", booking.booking_id, exc)
+        status = f"failed {booking.booking_id}: {str(exc)[:160]}"
+    await db.settings.update_one({"key": "site"}, {"$set": {"last_alert": status}}, upsert=True)
+
+
+def _csv_response(rows: List[dict], columns: List[str], filename: str) -> Response:
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=columns, extrasaction="ignore")
+    writer.writeheader()
+    writer.writerows(rows)
+    return Response(
+        content=buffer.getvalue(), media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @api_router.get("/")
@@ -269,6 +334,7 @@ async def create_booking(input: BookingCreate, request: Request):
         created_at=datetime.now(timezone.utc).isoformat(),
     )
     await db.bookings.insert_one(booking.model_dump())
+    asyncio.create_task(send_booking_alert(booking))
     return booking
 
 
@@ -276,6 +342,49 @@ async def create_booking(input: BookingCreate, request: Request):
 async def get_bookings(request: Request):
     await current_user(request, admin_only=True)
     return await db.bookings.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+
+
+BOOKING_CSV_COLUMNS = ["booking_id", "created_at", "status", "name", "phone", "email", "pass_type", "pass_variant", "quantity", "amount", "payment_reference", "payment_screenshot", "notes"]
+INTEREST_CSV_COLUMNS = ["interest_id", "created_at", "name", "phone", "notes"]
+
+
+@api_router.get("/bookings/export")
+async def export_bookings(request: Request):
+    await current_user(request, admin_only=True)
+    rows = await db.bookings.find({}, {"_id": 0}).sort("created_at", -1).to_list(5000)
+    return _csv_response(rows, BOOKING_CSV_COLUMNS, "solstice26-bookings.csv")
+
+
+@api_router.get("/interests/export")
+async def export_interests(request: Request):
+    await current_user(request, admin_only=True)
+    rows = await db.interests.find({}, {"_id": 0}).sort("created_at", -1).to_list(5000)
+    return _csv_response(rows, INTEREST_CSV_COLUMNS, "solstice26-group-interests.csv")
+
+
+@api_router.get("/settings")
+async def get_public_settings():
+    settings = await get_settings_doc()
+    return {"upi_id": settings["upi_id"], "whatsapp_number": settings["whatsapp_number"]}
+
+
+@api_router.get("/settings/admin", response_model=Settings)
+async def get_admin_settings(request: Request):
+    await current_user(request, admin_only=True)
+    settings = await get_settings_doc()
+    return Settings(**settings, alerts_configured=_twilio_config() is not None)
+
+
+@api_router.put("/settings", response_model=Settings)
+async def update_settings(input: SettingsUpdate, request: Request):
+    await current_user(request, admin_only=True)
+    whatsapp = "".join(ch for ch in input.whatsapp_number if ch.isdigit())
+    if len(whatsapp) < 10 or "@" not in input.upi_id:
+        raise HTTPException(status_code=400, detail="Enter a valid UPI ID (name@bank) and WhatsApp number with country code")
+    update = {"upi_id": input.upi_id.strip(), "whatsapp_number": whatsapp, "updated_at": datetime.now(timezone.utc).isoformat()}
+    await db.settings.update_one({"key": "site"}, {"$set": update}, upsert=True)
+    settings = await get_settings_doc()
+    return Settings(**settings, alerts_configured=_twilio_config() is not None)
 
 
 @api_router.patch("/bookings/{booking_id}", response_model=Booking)

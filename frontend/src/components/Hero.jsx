@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowUpRight, MessageCircle } from "lucide-react";
-import { HERO_IMAGE, WHATSAPP_URL, getCountdown } from "@/config";
+import { HERO_IMAGE, getCountdown, useSettings } from "@/config";
 
 const lineEase = [0.16, 1, 0.3, 1];
 
@@ -19,6 +19,7 @@ const MaskedLine = ({ children, delay }) => (
 
 export default function Hero() {
   const [timeLeft, setTimeLeft] = useState(getCountdown());
+  const { whatsapp_url: WHATSAPP_URL } = useSettings();
   const visualRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: visualRef, offset: ["start start", "end start"] });
   const y = useTransform(scrollYProgress, [0, 1], ["-6%", "8%"]);

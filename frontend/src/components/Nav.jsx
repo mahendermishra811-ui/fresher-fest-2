@@ -2,10 +2,11 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Menu, MessageCircle, X } from "lucide-react";
 import { Logo } from "./Logo";
-import { WHATSAPP_URL } from "@/config";
+import { useSettings } from "@/config";
 
 export default function Nav({ user }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { whatsapp_url: WHATSAPP_URL } = useSettings();
   return (
     <nav className="nav-wrap" data-testid="main-navigation">
       <a href="#top" className="brand" data-testid="brand-home">
