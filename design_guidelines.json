@@ -1,0 +1,52 @@
+{
+  "app_name": "DU SOL Freshers 2026 Official Pass Portal",
+  "app_type": "hybrid_fullstack",
+  "design_context": "Marketing / Event Pass Sales & Booking Portal",
+  "archetype": "ELECTRIC & NEON / FESTIVAL VIBE",
+  "visual_mood": "High-energy festival aesthetics, dark immersive obsidian background with neon laser accents, crystal glassmorphism navigation, urgent date-based pricing countdowns, and seamless manual UPI payment proof upload.",
+  "typography": {
+    "headings": "Unbounded, display sans-serif, bold, tight letter spacing",
+    "body": "Inter or DM Sans, clean geometric sans-serif for readability"
+  },
+  "colors": {
+    "primary": "#FF3366",
+    "secondary": "#00F0FF",
+    "accent": "#7000FF",
+    "background": "#0B0C10",
+    "surface": "#1F2833",
+    "text": "#C5C6C7",
+    "text_heading": "#FFFFFF"
+  },
+  "component_path": "/app/frontend/src/components",
+  "grids": {
+    "hero_grid": "grid-cols-1 lg:grid-cols-12 gap-8 items-center",
+    "bento_passes": "grid-cols-1 md:grid-cols-3 gap-8",
+    "dashboard_stats": "grid-cols-2 md:grid-cols-4 gap-4"
+  },
+  "layouts": {
+    "container_max": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+    "spacing_scale": "Generous padding p-8 to p-12 for bento cards, py-20 for section separation"
+  },
+  "motion": {
+    "library": "framer-motion",
+    "transitions": "Smooth staggered entrance, hover lift effects (-translate-y-2), glowing border tracing beams"
+  },
+  "accessibility": {
+    "standards": "WCAG AA contrast compliant, high-visibility interactive states, explicit hover text colors, aria-labels, and data-testid on all interactive elements"
+  },
+  "media": {
+    "hero_image": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MDV8MHwxfHNlYXJjaHwxfHxuZW9uJTIwZmVzdGl2YWwlMjBwYXJ0eSUyMGNyb3dkJTIwbGFzZXIlMjBsaWdodHN8ZW58MHx8fHwxNzkwNjc1MjI2fDA&ixlib=rb-4.1.0&q=85",
+    "party_ambiance": "https://images.unsplash.com/photo-1545128485-c400e7702796?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MDV8MHwxfHNlYXJjaHwzfHxuZW9uJTIwZmVzdGl2YWwlMjBwYXJ0eSUyMGNyb3dkJTIwbGFzZXIlMjBsaWdodHN8ZW58MHx8fHwxNzkwNjc1MjI2fDA&ixlib=rb-4.1.0&q=85",
+    "cocktail_mocktail": "https://images.unsplash.com/photo-1610515660473-c11d4f3f7d37?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzV8MHwxfHNlYXJjaHwxfHxjb2NrdGFpbCUyMG1vY2t0YWlsJTIwcGFydHklMjBiYXIlMjBmb29kfGVufDB8fHx8MTc5MDY3NTIyOXww&ixlib=rb-4.1.0&q=85"
+  },
+  "instructions_to_main_agent": [
+    "Build a gorgeous, high-conversion, futuristic pass booking portal for DU SOL Freshers Party 2026.",
+    "Include 3 Pass Tiers (Silver Solo, Gold Squad / Couple, VIP All-Access Diamond) with date-based price increases and urgency countdown timers.",
+    "Provide interactive pass selection supporting Single and Couple pass options.",
+    "Implement an easy manual payment proof upload workflow with QR code UPI scanning instructions (GPay/PhonePe/Paytm UPI ID: dusol2026@oksbi).",
+    "Provide instant pass confirmation state with generated Pass ID QR ticket, WhatsApp organiser direct contact CTA (pre-filled message), and booking interest form for group registration.",
+    "Include full party details: Date (October 18, 2026), Timings (4:00 PM onwards), Venue (Kingdom Arena, North Campus Delhi), Star DJ (DJ Ravish & DJ Krypton), Unlimited Multi-cuisine Buffet, Premium Mocktails & Bar Counters.",
+    "Ensure all interactive elements have data-testid attributes for rigorous testing.",
+    "Add admin view / toggle to review submitted booking interests and manual payment proofs."
+  ]
+}
